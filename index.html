@@ -242,6 +242,37 @@ main{padding-top:18px}
 .emopick button{border:0;background:var(--field);border-radius:12px;width:44px;height:44px;font-size:22px;cursor:pointer}
 .emopick button[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--sage);background:var(--sage-soft)}
 .subh{font-size:13.5px;font-weight:800;margin:20px 0 6px}
+/* quick entry */
+.quick{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:2px 20px}
+.quick::-webkit-scrollbar{display:none}
+.qchip{flex:0 0 auto;border:0;background:var(--sage-soft);color:var(--ink);border-radius:14px;padding:8px 12px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:transform .12s}
+.qchip:active{transform:scale(.95)}
+.qchip b{font-variant-numeric:tabular-nums}
+.qchip.sug{background:transparent;box-shadow:inset 0 0 0 1.5px var(--sage-light)}
+.qchip.add,.qchip.edit{background:var(--field);color:var(--muted);font-weight:700}
+.qhead{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--faint);margin-bottom:-6px}
+/* help */
+.qm{border:0;background:var(--field);color:var(--muted);width:20px;height:20px;border-radius:50%;font-size:12px;font-weight:800;line-height:20px;text-align:center;cursor:pointer;padding:0;margin-left:6px;vertical-align:1px}
+.streak .qm{background:var(--card)}
+.help h3{font-size:15px;margin:18px 0 6px}
+.help h3:first-child{margin-top:0}
+.help p{margin:0 0 6px;font-size:14px;line-height:1.75;color:var(--ink)}
+.help .ex{background:var(--field);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--muted);line-height:1.7}
+/* notice cards */
+.notice{display:flex;flex-direction:column;gap:10px;background:var(--sage-soft);box-shadow:none}
+.notice b{font-size:15px}
+.notice p{margin:0;font-size:13.5px;color:var(--ink);line-height:1.6}
+.notice .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+/* onboarding */
+.ob-step{font-size:12px;font-weight:800;color:var(--sage-deep);letter-spacing:.08em;margin-top:18px}
+.ob-step:first-child{margin-top:0}
+.ob h3{font-size:17px;margin:2px 0 10px}
+.ob .opts{display:grid;gap:8px}
+.ob .opt{border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:12px 14px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.ob .opt b{font-size:15px}
+.ob .opt small{color:var(--muted);font-size:12.5px;line-height:1.5}
+.ob .opt[aria-pressed="true"]{border-color:var(--sage);background:var(--sage-soft)}
+.ob select.field{margin-top:8px}
 /* history */
 .yr{font-size:14px;font-weight:800;color:var(--faint);margin:6px 4px -4px}
 .pcard{display:block;width:100%;text-align:left;border:0;cursor:pointer;position:relative}
@@ -337,7 +368,7 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
   <!-- HOME -->
   <section class="screen" id="v-home">
     <div class="card" aria-live="polite">
-      <div class="hero-top"><span class="lab">今日あと使える</span><span class="mood" id="mood"></span></div>
+      <div class="hero-top"><span class="lab">今日あと使える<button type="button" class="qm" data-help="today" aria-label="説明">?</button></span><span class="mood" id="mood"></span></div>
       <div class="big" id="left">¥0</div>
       <div class="track"><i id="meter"></i></div>
       <div class="hero-mid">
@@ -346,13 +377,16 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
       </div>
       <div class="status ok" id="status"></div>
     </div>
+    <div class="card notice" id="backupCard" hidden><b>💾 バックアップを書き出しましょう</b><p id="backupText"></p><div class="row2"><button class="btn ghost sm" type="button" id="bkLater" style="width:100%">あとで</button><button class="btn sm" type="button" id="bkNow" style="width:100%">書き出す</button></div></div>
     <div class="card advice" id="advice" hidden></div>
     <div class="streak" id="streak"></div>
+    
 
     <div class="card entry" id="entry">
       <div class="seg wide" id="kindSeg"><button type="button" data-kind="out" aria-pressed="true">支出</button><button type="button" data-kind="in" aria-pressed="false">収入</button></div>
       <div class="amtwrap"><span>¥</span><input class="field" id="amt" inputmode="numeric" placeholder="金額" autocomplete="off" aria-label="金額"></div>
       <input class="field" id="memo" placeholder="メモ(任意)" autocomplete="off" aria-label="メモ">
+      <div id="quickWrap"><div class="qhead"><span>よく使う(タップで記録)</span></div><div class="quick" id="quick" style="margin-top:10px"></div></div>
       <div class="hint" id="grpHint">グループを選んでカテゴリを選択(任意)</div>
       <div class="groups" id="groups"></div>
       <div class="subs" id="subs" hidden></div>
@@ -392,30 +426,18 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
     <div class="card">
       <h2>日別の支出</h2>
       <div class="chart no-swipe" id="chDaily"></div>
-      <div class="clegend"><span><i class="box"></i>枠の中</span><span><i class="box over"></i>枠オーバー</span><span><i class="dash"></i>その日の枠(繰越込み)</span><span><i class="daily"></i>日割りの額</span></div>
+      <div class="clegend"><span><i class="box"></i>日割り以内</span><span><i class="box over"></i>日割りオーバー</span><span><i class="dash"></i>その日の枠(繰越込み)</span><span><i class="daily"></i>日割りの額</span></div>
     </div>
     <div class="card">
-      <h2>今期の振り返り <small id="calRange"></small></h2>
+      <h2><span>今期の振り返り<button type="button" class="qm" data-help="calendar" aria-label="説明">?</button></span><small id="calRange"></small></h2>
       <div class="cal" id="cal"></div>
       <div class="legend">
-        <span><i class="dot none"></i>ほぼなし</span><span><i class="dot small"></i>少額</span><span><i class="dot norm"></i>普通</span><span><i class="dot over"></i>超過</span><span><i class="dot plan"></i>予定</span>
+        <span><i class="dot none"></i>ほぼなし</span><span><i class="dot small"></i>少額</span><span><i class="dot norm"></i>普通</span><span><i class="dot over"></i>日割りオーバー</span><span><i class="dot plan"></i>予定</span>
         <span class="r" id="noSpend"></span>
       </div>
     </div>
-    <div class="card">
-      <h2>期間別支出集計</h2>
-      <div class="range">
-        <label>開始日<input class="field" type="date" id="rFrom"></label>
-        <span class="til">〜</span>
-        <label>終了日<input class="field" type="date" id="rTo"></label>
-      </div>
-      <div class="tiles">
-        <div class="tile"><div class="l">支出合計</div><div class="v" id="rTotal">¥0</div><div class="s" id="rCount">0件</div></div>
-        <div class="tile"><div class="l">1日平均</div><div class="v" id="rAvg">¥0</div><div class="s" id="rDays">0日間</div></div>
-      </div>
-    </div>
     <div class="card" id="catCard">
-      <h2>カテゴリ別 <small>上の期間</small></h2>
+      <h2>カテゴリ別 <small id="catRange">今期</small></h2>
       <div class="bars" id="catBars"></div>
     </div>
     <div class="card">
@@ -434,7 +456,7 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
       <div class="chart no-swipe" id="chSave"></div>
       <p class="cnote" id="saveNote"></p>
     </div>
-    <div class="card">
+    <div class="card" id="flowCard">
       <h2>今期のお金の流れ</h2>
       <div class="flow" id="flow"></div>
     </div>
@@ -466,6 +488,8 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
       </div>
       <div class="sfield">
         <div class="row"><span class="lb" style="font-size:16px;font-weight:800;color:var(--ink)">予算期間</span><span class="pchips"><button class="pchip" type="button" id="pcMonth">今月</button><button class="pchip" type="button" id="pc30">30日</button></span></div>
+        <label for="pCycle">毎月の区切り</label>
+        <select class="field" id="pCycle"><option value="">自分で日付を決める</option><option value="1">毎月1日〜月末</option><option value="2">毎月2日から(給料日など)</option><option value="3">毎月3日から(給料日など)</option><option value="4">毎月4日から(給料日など)</option><option value="5">毎月5日から(給料日など)</option><option value="6">毎月6日から(給料日など)</option><option value="7">毎月7日から(給料日など)</option><option value="8">毎月8日から(給料日など)</option><option value="9">毎月9日から(給料日など)</option><option value="10">毎月10日から(給料日など)</option><option value="11">毎月11日から(給料日など)</option><option value="12">毎月12日から(給料日など)</option><option value="13">毎月13日から(給料日など)</option><option value="14">毎月14日から(給料日など)</option><option value="15">毎月15日から(給料日など)</option><option value="16">毎月16日から(給料日など)</option><option value="17">毎月17日から(給料日など)</option><option value="18">毎月18日から(給料日など)</option><option value="19">毎月19日から(給料日など)</option><option value="20">毎月20日から(給料日など)</option><option value="21">毎月21日から(給料日など)</option><option value="22">毎月22日から(給料日など)</option><option value="23">毎月23日から(給料日など)</option><option value="24">毎月24日から(給料日など)</option><option value="25">毎月25日から(給料日など)</option><option value="26">毎月26日から(給料日など)</option><option value="27">毎月27日から(給料日など)</option><option value="28">毎月28日から(給料日など)</option></select>
         <label for="pStart">開始日</label><input class="field" type="date" id="pStart">
         <label for="pEnd">終了日(締め日)</label><input class="field" type="date" id="pEnd">
         <div class="center-note" id="pLen"></div>
@@ -493,7 +517,7 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
         <button class="btn" type="button" id="resetYes" style="background:var(--soft-red)">削除する</button>
       </div>
     </div>
-    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 17<br>画面を左右にスワイプするとタブを切り替えられます。</div>
+    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 18<br>画面を左右にスワイプするとタブを切り替えられます。</div>
   </section>
   </div>
 </main>
@@ -532,7 +556,7 @@ const GROUPS=[
   {k:"fixed",n:"固定費",e:"🏠",subs:["家賃","光熱費","サブスク","保険"]},
   {k:"other",n:"その他",e:"📦",subs:[]}
 ];
-const IN_GROUPS=[{k:"salary",n:"給与",e:"💼",subs:[]},{k:"extra",n:"臨時収入",e:"🎁",subs:[]},{k:"other",n:"その他",e:"📦",subs:[]}];
+const IN_GROUPS=[{k:"salary",n:"給与",e:"💼",subs:[],note:"給与は記録のみです。予算には加えません(予算は設定タブの金額)"},{k:"extra",n:"臨時収入",e:"🎁",subs:[]},{k:"other",n:"その他",e:"📦",subs:[]}];
 const G=k=>GROUPS.find(g=>g.k===k)||IN_GROUPS.find(g=>g.k===k)||GROUPS[6];
 const DOW="日月火水木金土";
 const $=id=>document.getElementById(id);
@@ -551,7 +575,7 @@ const digits=v=>+toHalf(v).replace(/[^\d]/g,"")||0;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const monthEnd=s=>{const d=parseD(s);return ymd(new Date(d.getFullYear(),d.getMonth()+1,0,12));};
 
-const fresh=()=>{const t=today();return{v:3,nick:"",mode:"carry",inputMode:"total",period:{start:t.slice(0,8)+"01",end:monthEnd(t),budget:0},expenses:[],fixed:[],income:0,saveGoal:0,archives:[],pendingResult:null,goals:[],savings:[],autoKeys:[]};};
+const fresh=()=>{const t=today();return{v:3,nick:"",mode:"carry",inputMode:"total",period:{start:t.slice(0,8)+"01",end:monthEnd(t),budget:0},expenses:[],fixed:[],income:0,saveGoal:0,archives:[],pendingResult:null,goals:[],savings:[],autoKeys:[],quick:[],cycleDay:null,onboarded:false,lastBackup:null,backupSnooze:null};};
 let S=fresh();
 
 function migrate(o){return sanitize(migrateRaw(o));}
@@ -579,6 +603,11 @@ function sanitize(s){
   s.autoKeys=arr(s.autoKeys).filter(k=>typeof k==="string");
   s.income=num(s.income);s.saveGoal=num(s.saveGoal);
   s.pendingResult=typeof s.pendingResult==="string"?s.pendingResult:null;
+  s.quick=arr(s.quick).filter(q=>q&&num(q.amount)).map(q=>({id:q.id||uid("q"),amount:num(q.amount),group:gk(q.group),cat:typeof q.cat==="string"?q.cat:"",memo:typeof q.memo==="string"?q.memo:""})).slice(0,12);
+  s.cycleDay=Number.isInteger(+s.cycleDay)&&+s.cycleDay>=1&&+s.cycleDay<=28?+s.cycleDay:null;
+  /* 既にデータがある人には初回ガイドを出さない */
+  s.onboarded=!!s.onboarded||s.period.budget>0||s.expenses.length>0;
+  s.lastBackup=okDate(s.lastBackup)?s.lastBackup:null;s.backupSnooze=okDate(s.backupSnooze)?s.backupSnooze:null;
   s.v=3;
   return s;
 }
@@ -595,6 +624,7 @@ function migrateRaw(o){
   return s;
 }
 
+const LOCAL_DATA=true;
 /* ---------- storage ---------- */
 let remoteRef=null,saveTimer=null,saving=false,pending=false;
 function save(){
@@ -668,6 +698,13 @@ function streak(){
   return run;
 }
 
+/* 給料日などで区切る期間:day日 〜 翌月のday日の前日 */
+function addMonth(dstr,n){const d=parseD(dstr);const y=d.getFullYear(),m=d.getMonth()+n,day=d.getDate();const last=new Date(y,m+1,0).getDate();return ymd(new Date(y,m,Math.min(day,last),12));}
+function cycleRange(dstr,day){
+  if(day===1){const st=dstr.slice(0,8)+"01";return{start:st,end:monthEnd(st)};}
+  const d=parseD(dstr);let st=new Date(d.getFullYear(),d.getMonth(),day,12);if(ymd(st)>dstr)st=new Date(d.getFullYear(),d.getMonth()-1,day,12);
+  const s0=ymd(st);return{start:s0,end:addDays(addMonth(s0,1),-1)};
+}
 /* ---------- period rollover ---------- */
 function summarize(p){
   const c=calcPeriod(p),sa=streakAllow(p,c);
@@ -689,9 +726,9 @@ function rollover(){
     const arc=Object.assign({id:uid("p"),hist:histOf(p)},summarize(p));
     if(p.budget>0||arc.spent>0)S.archives.push(arc);
     rolled=arc;
-    const wasMonth=p.start.endsWith("-01")&&p.end===monthEnd(p.start);
+    const wasMonth=!S.cycleDay&&p.start.endsWith("-01")&&p.end===monthEnd(p.start);
     const ns=addDays(p.end,1);
-    const ne=wasMonth?monthEnd(ns):addDays(ns,c.D-1);
+    const ne=S.cycleDay?cycleRange(ns,S.cycleDay).end:wasMonth?monthEnd(ns):addDays(ns,c.D-1);
     S.period={start:ns,end:ne,budget:p.budget,hist:[{from:ns,daily:p.budget/pLen({start:ns,end:ne}),budget:p.budget,end:ne}]};
   }
   if(rolled&&rolled.budget>0){S.pendingResult=rolled.id;}
@@ -720,7 +757,7 @@ function renderHeader(){
 /* ---------- HOME ---------- */
 let kind="out",grp=null,sub=null;
 function renderHome(){
-  renderGoals();
+  renderGoals();renderBackupCard();renderQuick();
   const p=S.period,c=calcPeriod(p),i=c.ti;
   const allow=c.allow[i],sp=c.spent[i],left=allow-sp,carry=allow-c.base;
   if(!p.budget){
@@ -750,7 +787,7 @@ function renderHome(){
   }
   if(!p.budget||!calcPeriod(p).inP)$("advice").hidden=true;
   const s=streak();
-  $("streak").innerHTML=s?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3c.6 3.2 4.5 5.3 4.5 10a4.5 4.5 0 0 1-9 0c0-2.2 1.1-3.6 2.2-4.6.2 1.5.9 2.5 2 2.9-.4-2.6.1-5.5.3-8.3z"/></svg><span><b>${s}</b> 日連続達成中</span>`:"";
+  $("streak").innerHTML=s?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3c.6 3.2 4.5 5.3 4.5 10a4.5 4.5 0 0 1-9 0c0-2.2 1.1-3.6 2.2-4.6.2 1.5.9 2.5 2 2.9-.4-2.6.1-5.5.3-8.3z"/></svg><span><b>${s}</b> 日連続達成中</span><button type="button" class="qm" data-help="today" aria-label="説明">?</button>`:"";
   $("streak").hidden=!s;
 
   const sel=$("dateRow").hidden?today():($("date").value||today());
@@ -773,9 +810,102 @@ function renderGroups(){
   const g=list.find(x=>x.k===grp);
   if(g&&g.subs.length){$("subs").hidden=false;$("subs").innerHTML=g.subs.map(s=>`<button type="button" class="chip" data-sub="${esc(s)}" aria-pressed="${sub===s}">${esc(s)}</button>`).join("");}
   else{$("subs").hidden=true;$("subs").innerHTML="";}
-  $("grpHint").textContent=kind==="in"?"種類を選択(任意)":"グループを選んでカテゴリを選択(任意)";
+  $("grpHint").textContent=g&&g.note?g.note:kind==="in"?"種類を選択(任意)":"グループを選んでカテゴリを選択(任意)";
+  renderQuick();
   $("addBtn").textContent=kind==="in"?"収入を追加":"支出を追加";
   $("moreBtn").firstChild.textContent=kind==="in"?"過去の収入や先の収入の入力はこちら ":"過去の支出や先の支出の入力はこちら ";
+}
+
+/* ---------- よく使う(ワンタップ入力) ---------- */
+const qLabel=q=>q.memo||q.cat||G(q.group).n;
+function quickSuggest(){
+  const m={};
+  for(const e of S.expenses){if(e.type==="in"||e.group==="fixed"||e.planned)continue;const k=e.group+"|"+(e.memo||e.cat)+"|"+e.amount;(m[k]=m[k]||{n:0,e}).n++;}
+  return Object.values(m).filter(x=>x.n>=2).sort((a,b)=>b.n-a.n).slice(0,3).map(x=>({amount:x.e.amount,group:x.e.group,cat:x.e.cat||"",memo:x.e.memo||"",sug:true}))
+    .filter(x=>!S.quick.some(q=>q.amount===x.amount&&q.group===x.group&&(q.memo||q.cat)===(x.memo||x.cat)));
+}
+let quickView=[];
+function renderQuick(){
+  const w=$("quickWrap");if(!w)return;
+  if(kind==="in"){w.hidden=true;return;}
+  w.hidden=false;
+  quickView=[...S.quick,...quickSuggest()];
+  $("quick").innerHTML=quickView.map((q,i)=>`<button type="button" class="qchip${q.sug?" sug":""}" data-q="${i}">${G(q.group).e} ${esc(qLabel(q))} <b>${yen(q.amount)}</b></button>`).join("")
+    +`<button type="button" class="qchip add" id="qAdd">＋ 今の入力を登録</button>`+(S.quick.length?`<button type="button" class="qchip edit" id="qEdit">編集</button>`:"");
+}
+function quickRecord(q){
+  const date=$("dateRow").hidden?today():($("date").value||today());
+  const e={id:uid("e"),date,amount:q.amount,type:"out",group:q.group,cat:q.cat||"",memo:q.memo||""};
+  if(e.group!=="fixed"&&date>today())e.planned=true;
+  S.expenses.push(e);if(date<S.period.start)refreshArchiveFor(date);save();renderAll();
+  const c=calcPeriod(S.period);
+  toast(date===today()&&S.period.budget?`${qLabel(q)} ${yen(q.amount)} を記録。今日あと ${yen(c.allow[c.ti]-c.spent[c.ti])}`:`${md(date)}に ${qLabel(q)} ${yen(q.amount)} を記録しました`,()=>{S.expenses=S.expenses.filter(x=>x.id!==e.id);refreshArchiveFor(e.date);save();renderAll();});
+}
+function quickAddFromInput(){
+  const v=digits($("amt").value);
+  if(!v){toast("金額を入れてから押すと、その内容を登録できます");$("amt").focus();return;}
+  const q={id:uid("q"),amount:v,group:grp||"other",cat:sub||"",memo:$("memo").value.trim()};
+  if(S.quick.length>=12){toast("よく使うは12件までです。編集から減らしてください");return;}
+  S.quick.push(q);save();renderQuick();toast(`「${qLabel(q)} ${yen(v)}」をよく使うに登録しました`);
+}
+let quickRedraw=null;
+function openQuickEdit(){
+  const draw=()=>{$("sheetBd").innerHTML=(S.quick.length?S.quick.map(q=>`<div class="sw"><button class="sw-act" type="button" data-qdel="${esc(q.id)}">削除</button><div class="sw-main" data-sw><span class="em">${G(q.group).e}</span><span class="tx"><b>${esc(qLabel(q))}</b><span>${G(q.group).n}${q.cat?" · "+esc(q.cat):""}</span></span><span class="am">${yen(q.amount)}</span></div></div>`).join(""):`<div class="empty">登録はありません</div>`)
+    +`<div class="swipe-hint">← 左にスワイプで削除</div><p class="muted" style="font-size:13px;margin:14px 0 0">登録するには、ホームで金額・グループ・メモを入れてから「＋ 今の入力を登録」を押します。2回以上記録した組み合わせは、点線の候補として自動で出ます。</p>`;};
+  openSheet("よく使うの編集","");draw();quickRedraw=draw;
+}
+
+/* ---------- 説明(?) ---------- */
+const HELP={
+  today:["今日あと使える",`<h3>今日あと使える</h3><p>今日の「その日の枠」から、今日使った額を引いた残りです。</p>
+    <h3>その日の枠</h3><p><b>繰越型</b>:日割りの額に、前の日までの余り(または使いすぎ)をそのまま足し引きした額です。</p><p><b>平均型</b>:残りの予算を、残りの日数で均等に割った額です。</p>
+    <h3>予算を途中で変えたら</h3><p>変えた日から「新しい予算 − それまでに使った額」を残りの日数で均等に分けます。変えた日より前の枠は変わりません。</p>
+    <h3>連続達成</h3><p>その日の支出が「その日の枠」に収まった日、または1円も使わなかった日が続いた日数です。予算を変えた日より前の日は、当時の枠で判定したままです。</p>`],
+  calendar:["カレンダーの見かた",`<h3>色の基準は「日割りの額」</h3><p>日割りの額は、予算 ÷ 期間の日数です。その日の支出が日割りの額をこえると、黄色(日割りオーバー)になります。</p>
+    <p class="ex">例:予算93,000円・31日なら日割りは3,000円。前の日の余りで枠が6,000円あっても、4,000円使った日は黄色です。</p>
+    <h3>「今日あと使える」との違い</h3><p>ホームの金額と連続達成は、繰越込みの「その日の枠」で判定します。カレンダーは、日々のペースそのものを見るために、繰越を含めない日割りの額で判定しています。</p>
+    <h3>予算を途中で変えたら</h3><p>変えた日から新しい日割りの額で判定します。それより前の日の色は変わりません。</p>`]
+};
+function openHelp(k){const h=HELP[k];if(h)openSheet(h[0],`<div class="help">${h[1]}</div>`);}
+
+/* ---------- バックアップのお知らせ(端末保存の版だけ) ---------- */
+function renderBackupCard(){
+  const card=$("backupCard");if(!card)return;
+  if(!LOCAL_DATA||S.expenses.length<5||(S.backupSnooze&&S.backupSnooze>today())){card.hidden=true;return;}
+  const first=S.expenses.reduce((m,e)=>e.date<m?e.date:m,today());
+  const due=S.lastBackup?diffDays(S.lastBackup,today())>=30:diffDays(first,today())>=7;
+  card.hidden=!due;
+  if(due)$("backupText").textContent=S.lastBackup?`最後のバックアップから${diffDays(S.lastBackup,today())}日たちました。記録はこのiPhoneの中にだけあるので、月に一度は控えを書き出しておくと安心です。`:"記録はこのiPhoneの中にだけあります。機種変更や故障に備えて、控えを書き出しておきましょう。";
+}
+
+/* ---------- 初回の設定ガイド ---------- */
+function openOnboarding(){
+  let cyc=1,mode="carry";
+  const t=today();
+  openSheet("Paycee.へようこそ",`<div class="ob">
+    <div class="ob-step">STEP 1</div><h3>期間の区切り</h3>
+    <div class="opts" id="obCyc"><button type="button" class="opt" data-cyc="1" aria-pressed="true"><b>毎月1日〜月末</b><small>カレンダーどおりに1か月ずつ</small></button><button type="button" class="opt" data-cyc="pay" aria-pressed="false"><b>給料日から</b><small>給料日〜次の給料日の前日まで</small></button></div>
+    <select class="field" id="obDay" hidden>${[...Array(27)].map((_,i)=>`<option value="${i+2}"${i+2===25?" selected":""}>毎月${i+2}日から</option>`).join("")}</select>
+    <div class="ob-step">STEP 2</div><h3>この期間に使っていい額</h3>
+    <div class="yfield"><span>¥</span><input class="field" id="obBud" inputmode="numeric" placeholder="例 60,000"></div>
+    <p class="hint" style="margin:8px 0 0">食費・日用品・交際費など、日々の支出に使う額です。家賃などの固定費は含めません。迷ったら「手取り − 固定費 − 貯金」が目安です。</p>
+    <p class="hint" id="obDaily" style="margin:6px 0 0"></p>
+    <div class="ob-step">STEP 3</div><h3>余りや使いすぎの扱い</h3>
+    <div class="opts" id="obMode"><button type="button" class="opt" data-m="carry" aria-pressed="true"><b>繰越型(おすすめ)</b><small>余った分も使いすぎた分も、そのまま翌日の枠へ。今日の頑張りがすぐ見える</small></button><button type="button" class="opt" data-m="avg" aria-pressed="false"><b>平均型</b><small>余りや使いすぎを、残りの日に均等に配分。毎日の枠がなだらか</small></button></div>
+    <button class="btn" type="button" id="obGo" style="margin-top:20px">はじめる</button>
+    <button class="more" type="button" id="obSkip" style="margin:10px auto 0">あとで設定する</button></div>`);
+  const range=()=>cycleRange(t,cyc==="pay"?+$("obDay").value:1);
+  const upd=()=>{const r=range(),D=pLen(r),v=digits($("obBud").value);$("obDaily").textContent=`期間:${md(r.start)}〜${md(r.end)}(${D}日)`+(v?` · 日割り 約${yen(v/D)}/日`:"");};
+  $("obCyc").onclick=e=>{const b=e.target.closest("[data-cyc]");if(!b)return;cyc=b.dataset.cyc==="pay"?"pay":1;for(const x of $("obCyc").children)x.setAttribute("aria-pressed",x===b);$("obDay").hidden=cyc!=="pay";upd();};
+  $("obDay").onchange=upd;
+  $("obMode").onclick=e=>{const b=e.target.closest("[data-m]");if(!b)return;mode=b.dataset.m;for(const x of $("obMode").children)x.setAttribute("aria-pressed",x===b);};
+  const bi=$("obBud");bi.addEventListener("input",ev=>{if(ev.isComposing)return;const v=digits(bi.value);bi.value=v?v.toLocaleString("ja-JP"):"";upd();});
+  $("obGo").onclick=()=>{const v=digits(bi.value);if(!v){toast("予算を入れてください");bi.focus();return;}
+    const r=range(),day=cyc==="pay"?+$("obDay").value:1;
+    S.period={start:r.start,end:r.end,budget:v,hist:[{from:r.start,daily:v/pLen(r),budget:v,end:r.end}]};S.cycleDay=day;S.mode=mode;S.onboarded=true;save();draft=null;closeSheet();renderAll();
+    toast(`準備ができました。今日あと ${yen(calcPeriod(S.period).allow[calcPeriod(S.period).ti])} 使えます`);};
+  $("obSkip").onclick=()=>{S.onboarded=true;save();closeSheet();};
+  upd();
 }
 
 /* やさしいアドバイス:使いすぎ・赤字・ペースが早い時だけ出す */
@@ -833,17 +963,15 @@ function renderStatsBase(){
   }
   $("cal").innerHTML=h;
   $("noSpend").textContent=`無支出日:${zero}日`;
-  if(!rFrom){rFrom=p.start;rTo=p.end;}
-  $("rFrom").value=rFrom;$("rTo").value=rTo;
-  const a=rFrom<=rTo?rFrom:rTo,b=rFrom<=rTo?rTo:rFrom;
-  const items=S.expenses.filter(e=>e.type!=="in"&&e.date>=a&&e.date<=b);
-  const tot=items.reduce((s,e)=>s+e.amount,0),nd=diffDays(a,b)+1;
-  $("rTotal").textContent=yen(tot);$("rCount").textContent=`${items.length}件`;
-  $("rAvg").textContent=yen(tot/nd);$("rDays").textContent=`${nd}日間`;
+  const a=p.start,b=p.end;
+  const items=S.expenses.filter(e=>e.type!=="in"&&e.group!=="fixed"&&e.date>=a&&e.date<=b);
+  const tot=items.reduce((s,e)=>s+e.amount,0);
+  $("catRange").textContent=`今期 ${md(a)}〜${md(b)}`;
   const cats={};for(const e of items)cats[e.group]=(cats[e.group]||0)+e.amount;
   const ent=Object.entries(cats).sort((x,y)=>y[1]-x[1]),mx=ent[0]?.[1]||1;
   $("catBars").innerHTML=ent.length?ent.map(([k,v])=>`<div class="bar"><span class="em">${G(k).e}</span><div><div class="n"><span>${G(k).n}</span><span class="muted">${Math.round(v/tot*100)}%</span></div><div class="t"><i style="width:${v/mx*100}%"></i></div></div><span class="v">${yen(v)}</span></div>`).join(""):`<div class="empty">支出を記録すると分析が表示されます</div>`;
   const fx=S.fixed.reduce((s,f)=>s+f.amount,0),inc=S.income,rest=inc-fx-c.spentTo;
+  $("flowCard").hidden=!inc;
   $("flow").innerHTML=inc?
     `<div><span>手取り収入</span><span class="num">${yen(inc)}</span></div><div><span>固定費</span><span class="num">−${yen(fx).replace("−","")}</span></div><div><span>今期の支出(今日まで)</span><span class="num">−${yen(c.spentTo).replace("−","")}</span></div><div class="tot"><span>手元に残る見込み</span><span class="num ${rest<0?"neg":""}">${yen(rest)}</span></div>`+
     (S.saveGoal?`<div><span>先取り貯金の目標</span><span class="num">${yen(S.saveGoal)}</span></div><div><span>目標との差</span><span class="num ${rest-S.saveGoal<0?"neg":"pos"}">${rest-S.saveGoal>=0?"+":""}${yen(rest-S.saveGoal)}</span></div>`:"")
@@ -1005,6 +1133,17 @@ function renderGoals(){
     return `<div class="goal"><span class="em">${g.emoji}</span><div style="min-width:0"><div class="gn"><b>${esc(g.name)}</b><span>${shortY(v)} / ${shortY(g.target)}</span></div><div class="gbar"><i style="width:${r*100}%"></i></div></div><span class="gp">${Math.floor(r*100)}%</span></div>`;}).join("");
   $("goalList").innerHTML=h;
 }
+/* 貯金のペース(1日あたり):直近90日の実績、なければ先取り貯金の目標から */
+function savePacePerDay(){
+  const since=addDays(today(),-89),sv=S.savings.filter(x=>x.date>=since);
+  if(sv.length){const first=sv.reduce((m,x)=>x.date<m?x.date:m,today());const days=Math.max(30,diffDays(first,today())+1);return sv.reduce((a,x)=>a+x.amount,0)/days;}
+  return S.saveGoal?S.saveGoal/30:0;
+}
+function goalAhead(amount){
+  const g=S.goals.find(x=>goalSaved(x.id)<x.target),pace=savePacePerDay();
+  if(!g||!pace||amount<=0)return null;
+  return{g,days:Math.max(1,Math.round(amount/pace))};
+}
 function openSaving(amount,memo){
   let gsel=S.goals[0]?S.goals[0].id:null;
   openSheet("貯金を記録",`<div style="display:flex;flex-direction:column;gap:12px">
@@ -1020,7 +1159,8 @@ function openSaving(amount,memo){
     const rec={id:uid("s"),date:$("svDate").value||today(),amount:v,goalId:gsel,memo:$("svMemo").value.trim()};
     S.savings.push(rec);save();closeSheet();renderAll();
     const g=S.goals.find(x=>x.id===gsel),done=g&&goalSaved(g.id)>=g.target&&goalSaved(g.id)-v<g.target;
-    toast(done?`🎉「${g.name}」の目標に届きました!`:g?`「${g.name}」に ${yen(v)} 貯金しました`:`${yen(v)} の貯金を記録しました`,()=>{S.savings=S.savings.filter(x=>x.id!==rec.id);save();renderAll();});};
+    const pace=savePacePerDay(),restG=g?g.target-goalSaved(g.id):0;
+    toast(done?`🎉「${g.name}」の目標に届きました!`:g?`「${g.name}」に ${yen(v)}。あと ${yen(restG)}`+(pace?`(約${Math.max(1,Math.round(v/pace))}日分前進)`:""):`${yen(v)} の貯金を記録しました`,()=>{S.savings=S.savings.filter(x=>x.id!==rec.id);save();renderAll();});};
 }
 let goalsRedraw=null;
 function openGoals(){
@@ -1073,7 +1213,7 @@ async function exportCsv(){
 /* バックアップ・引き継ぎ用(独立版のPaycee.でも読み込める形式) */
 async function exportBackup(){
   const data=JSON.stringify({app:"paycee",format:1,exported:new Date().toISOString(),data:S});
-  if(await saveFile(`paycee_backup_${today()}.json`,data,"application/json"))toast("バックアップを書き出しました");
+  if(await saveFile(`paycee_backup_${today()}.json`,data,"application/json")){S.lastBackup=today();S.backupSnooze=null;save();renderHome();toast("バックアップを書き出しました");}
 }
 async function saveFile(name,data,mime){
   const blob=new Blob([data],{type:mime});
@@ -1135,7 +1275,8 @@ function openArchive(id){
 /* ---------- SETTINGS ---------- */
 let draft=null;
 function renderSet(){
-  if(!draft)draft={nick:S.nick,inputMode:S.inputMode,start:S.period.start,end:S.period.end,budget:S.period.budget,income:S.income,saveGoal:S.saveGoal};
+  if(!draft)draft={nick:S.nick,inputMode:S.inputMode,start:S.period.start,end:S.period.end,budget:S.period.budget,income:S.income,saveGoal:S.saveGoal,cycleDay:S.cycleDay};
+  $("pCycle").value=draft.cycleDay?String(draft.cycleDay):(draft.start.endsWith("-01")&&draft.end===monthEnd(draft.start)?"1":"");
   const D=Math.max(1,diffDays(draft.start,draft.end)+1);
   $("nick").value=draft.nick;
   for(const b of $("inputSeg").children)b.setAttribute("aria-pressed",b.dataset.in===draft.inputMode);
@@ -1218,7 +1359,7 @@ function showResult(id){
     tip=a.topGroup?`いちばん使ったのは「${G(a.topGroup).n}」(${yen(a.topAmt)})でした。次の期間は、ここを少しだけ控えめにしてみませんか。`:"次の期間は、まず3日間だけ枠の中で過ごすことから始めてみましょう。";}
   $("mbox").innerHTML=`<div class="badge${warm?" warm":""}">${badge}</div><h3>${esc(title)}</h3><p>${body}</p>
   <div class="mtiles"><div><div class="v">${a.okDays}<span style="font-size:12px">/${a.D}</span></div><div class="l">予算内の日</div></div><div><div class="v">${a.zeroDays}</div><div class="l">無支出日</div></div><div><div class="v">${Math.round(r*100)}%</div><div class="l">予算の使用率</div></div></div>
-  <div class="tip">${tip}</div>${rem>0?`<button class="btn ghost" type="button" id="mSave" style="margin-bottom:10px">💰 残った ${yen(rem)} を貯金に記録</button>`:""}<button class="btn" type="button" id="mOk">次の期間へ</button><div class="hint" style="margin-top:10px">次の期間:${md(S.period.start)}〜${md(S.period.end)} · 予算 ${yen(S.period.budget)}</div>`;
+  <div class="tip">${tip}</div>${rem>0&&goalAhead(rem)?`<div class="tip" style="background:var(--field)">💡 この ${yen(rem)} を「${esc(goalAhead(rem).g.name)}」に入れると、目標が約${goalAhead(rem).days}日早まります</div>`:""}${rem>0?`<button class="btn ghost" type="button" id="mSave" style="margin-bottom:10px">💰 残った ${yen(rem)} を貯金に記録</button>`:""}<button class="btn" type="button" id="mOk">次の期間へ</button><div class="hint" style="margin-top:10px">次の期間:${md(S.period.start)}〜${md(S.period.end)} · 予算 ${yen(S.period.budget)}</div>`;
   const m=$("modal"),sc=$("scrim");m.hidden=false;sc.hidden=false;
   requestAnimationFrame(()=>{m.classList.add("on");sc.classList.add("on");});
   $("mOk").onclick=closeModal;
@@ -1283,6 +1424,11 @@ document.addEventListener("click",e=>{
   const fd=e.target.closest("[data-fxdel]");if(fd){const i=S.fixed.findIndex(f=>f.id===fd.dataset.fxdel);if(i>=0){const [f]=S.fixed.splice(i,1);save();openRow=null;fixedRedraw&&fixedRedraw();renderHome();toast(`${f.name} を削除しました`,()=>{S.fixed.splice(i,0,f);save();fixedRedraw&&fixedRedraw();renderHome();});}return;}
   const gd=e.target.closest("[data-goaldel]");if(gd){const i=S.goals.findIndex(g=>g.id===gd.dataset.goaldel);if(i>=0){const [g]=S.goals.splice(i,1);save();openRow=null;goalsRedraw&&goalsRedraw();renderAll();toast(`目標「${g.name}」を削除しました(貯金の記録は残ります)`,()=>{S.goals.splice(i,0,g);save();goalsRedraw&&goalsRedraw();renderAll();});}return;}
   const sd=e.target.closest("[data-savdel]");if(sd){const i=S.savings.findIndex(x=>x.id===sd.dataset.savdel);if(i>=0){const [x]=S.savings.splice(i,1);save();openRow=null;goalsRedraw&&goalsRedraw();renderAll();toast(`${yen(x.amount)} の貯金記録を削除しました`,()=>{S.savings.splice(i,0,x);save();goalsRedraw&&goalsRedraw();renderAll();});}return;}
+  const qq=e.target.closest("[data-q]");if(qq){const q=quickView[+qq.dataset.q];if(q)quickRecord(q);return;}
+  if(e.target.closest("#qAdd")){quickAddFromInput();return;}
+  if(e.target.closest("#qEdit")){openQuickEdit();return;}
+  const qd=e.target.closest("[data-qdel]");if(qd){const i=S.quick.findIndex(x=>x.id===qd.dataset.qdel);if(i>=0){const [q]=S.quick.splice(i,1);save();openRow=null;quickRedraw&&quickRedraw();renderQuick();toast(`「${qLabel(q)}」を削除しました`,()=>{S.quick.splice(i,0,q);save();quickRedraw&&quickRedraw();renderQuick();});}return;}
+  const hp=e.target.closest("[data-help]");if(hp){openHelp(hp.dataset.help);return;}
   const ms=e.target.closest("[data-mode]");if(ms){S.mode=ms.dataset.mode;save();renderAll();toast(S.mode==="avg"?"平均型:余りや使いすぎを残りの日に均等に配分します":"繰越型:余りや使いすぎをそのまま翌日へ");return;}
   const tb=e.target.closest("nav.tabs button");if(tb){go(tb.dataset.tab,1);return;}
   const g=e.target.closest("[data-grp]");if(g){grp=grp===g.dataset.grp?null:g.dataset.grp;sub=null;renderGroups();return;}
@@ -1335,8 +1481,8 @@ $("addSaving").onclick=()=>openSaving();
 $("csvBtn").onclick=exportCsv;
 $("bkOut").onclick=exportBackup;
 bindCharts();
-$("rFrom").addEventListener("change",e=>{rFrom=e.target.value||rFrom;renderStats();});
-$("rTo").addEventListener("change",e=>{rTo=e.target.value||rTo;renderStats();});
+$("bkNow").onclick=exportBackup;
+$("bkLater").onclick=()=>{S.backupSnooze=addDays(today(),7);save();renderHome();toast("1週間後にまたお知らせします");};
 
 /* settings inputs */
 $("nick").addEventListener("input",e=>{draft.nick=e.target.value.slice(0,20);});
@@ -1344,10 +1490,11 @@ $("bud").addEventListener("input",e=>{if(e.isComposing)return;const v=digits(e.t
 $("bud").addEventListener("change",renderSet);
 for(const[id,k]of[["inc","income"],["sav","saveGoal"]]){$(id).addEventListener("input",e=>{if(e.isComposing)return;const v=digits(e.target.value);e.target.value=v?v.toLocaleString("ja-JP"):"";draft[k]=v;});$(id).addEventListener("change",renderSet);}
 const keepDaily=f=>{const D0=Math.max(1,diffDays(draft.start,draft.end)+1),daily=draft.budget/D0;f();if(draft.inputMode==="daily"){const D1=Math.max(1,diffDays(draft.start,draft.end)+1);draft.budget=Math.round(daily*D1);}renderSet();};
-$("pStart").addEventListener("change",e=>keepDaily(()=>{if(e.target.value)draft.start=e.target.value;}));
-$("pEnd").addEventListener("change",e=>keepDaily(()=>{if(e.target.value)draft.end=e.target.value;}));
-$("pcMonth").onclick=()=>keepDaily(()=>{const t=today();draft.start=t.slice(0,8)+"01";draft.end=monthEnd(t);});
-$("pc30").onclick=()=>keepDaily(()=>{const t=today();draft.start=t;draft.end=addDays(t,29);});
+$("pStart").addEventListener("change",e=>keepDaily(()=>{if(e.target.value)draft.start=e.target.value;draft.cycleDay=null;}));
+$("pEnd").addEventListener("change",e=>keepDaily(()=>{if(e.target.value)draft.end=e.target.value;draft.cycleDay=null;}));
+$("pcMonth").onclick=()=>keepDaily(()=>{const t=today();draft.start=t.slice(0,8)+"01";draft.end=monthEnd(t);draft.cycleDay=1;});
+$("pc30").onclick=()=>keepDaily(()=>{const t=today();draft.start=t;draft.end=addDays(t,29);draft.cycleDay=null;});
+$("pCycle").addEventListener("change",e=>{const v=+e.target.value||null;keepDaily(()=>{draft.cycleDay=v;if(v){const r=cycleRange(today(),v);draft.start=r.start;draft.end=r.end;}});});
 $("useSuggest").onclick=()=>{draft.budget=draft.income-S.fixed.reduce((a,f)=>a+f.amount,0)-draft.saveGoal;renderSet();};
 /* 設定は変更したその場で反映する(保存ボタンは確認用) */
 function applySettings(quiet){
@@ -1366,6 +1513,7 @@ function applySettings(quiet){
     if(!h.length||curB!==np.budget||curE!==np.end||oh.some(x=>x.from>=from))h.push(ent(from));
     np.hist=h.length?h:[ent(np.start)];
   }
+  S.cycleDay=draft.cycleDay||null;
   S.nick=draft.nick.trim();S.inputMode=draft.inputMode;S.period=np;S.income=draft.income;S.saveGoal=draft.saveGoal;
   save();renderHome();return true;
 }
@@ -1393,7 +1541,7 @@ loadLocal();const bootAuto=autoFixed();rollover();renderGroups();
 let startTab="home";try{startTab=localStorage.getItem("paycee-tab")||"home";}catch(e){}
 go("home",0);
 const splashDone=splash();
-splashDone.then(()=>{if(bootAuto.length)toast(`固定費(${bootAuto.join("、")})を自動で記録しました`);if(S.pendingResult)showResult(S.pendingResult);});
+splashDone.then(()=>{if(!S.onboarded&&!S.pendingResult)setTimeout(openOnboarding,250);if(bootAuto.length)toast(`固定費(${bootAuto.join("、")})を自動で記録しました`);if(S.pendingResult)showResult(S.pendingResult);});
 
 $("bkIn").addEventListener("change",async e=>{
   const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;

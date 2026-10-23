@@ -20,6 +20,8 @@ swap('saveFile','''async function saveFile(name,data,mime){
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);return true;
 }''')
+swap('flags','const LOCAL_DATA=true;')
+swap('<!--notice','')
 swap('<!--import','<label class="btn ghost" style="margin-bottom:10px;cursor:pointer">バックアップを読み込む<input type="file" id="bkIn" accept=".json,application/json" hidden></label>')
 swap('cloud','''$("bkIn").addEventListener("change",async e=>{
   const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;
