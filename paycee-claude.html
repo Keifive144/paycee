@@ -376,7 +376,7 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
     <div class="card">
       <h2>日別の支出</h2>
       <div class="chart no-swipe" id="chDaily"></div>
-      <div class="clegend"><span><i class="box"></i>枠の中</span><span><i class="box over"></i>枠オーバー</span><span><i class="dash"></i>その日の枠(繰越込み)</span><span><i class="daily"></i>当初の日割り</span></div>
+      <div class="clegend"><span><i class="box"></i>枠の中</span><span><i class="box over"></i>枠オーバー</span><span><i class="dash"></i>その日の枠(繰越込み)</span><span><i class="daily"></i>日割りの額</span></div>
     </div>
     <div class="card">
       <h2>今期の振り返り <small id="calRange"></small></h2>
@@ -477,7 +477,7 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
         <button class="btn" type="button" id="resetYes" style="background:var(--soft-red)">削除する</button>
       </div>
     </div>
-    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 13<br>画面を左右にスワイプするとタブを切り替えられます。</div>
+    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 14<br>画面を左右にスワイプするとタブを切り替えられます。</div>
   </section>
   </div>
 </main>
@@ -554,6 +554,7 @@ function sanitize(s){
   const p=s.period&&typeof s.period==="object"?s.period:{};
   s.period={start:okDate(p.start)?p.start:f.period.start,end:okDate(p.end)?p.end:f.period.end,budget:num(p.budget)};
   if(s.period.end<s.period.start)s.period={start:f.period.start,end:f.period.end,budget:s.period.budget};
+  s.period.hist=histOf(Object.assign({},s.period,{hist:Array.isArray(p.hist)?p.hist.map(x=>x&&{from:x.from,daily:+x.daily}):[]}));
   s.expenses=arr(s.expenses).filter(e=>e&&okDate(e.date)&&num(e.amount)>0).map(e=>({id:typeof e.id==="string"&&e.id?e.id:uid("e"),date:e.date,amount:num(e.amount),type:e.type==="in"?"in":"out",group:gk(e.group),cat:typeof e.cat==="string"?e.cat:"",memo:typeof e.memo==="string"?e.memo:"",...(e.planned?{planned:true}:{}),...(e.auto?{auto:true}:{})}));
   s.fixed=arr(s.fixed).filter(x=>x&&x.name&&num(x.amount)).map(x=>({id:x.id||uid("f"),name:String(x.name),amount:num(x.amount),day:+x.day||0,since:okDate(x.since)?x.since:today()}));
   s.goals=arr(s.goals).filter(x=>x&&x.name).map(x=>({id:x.id||uid("g"),name:String(x.name),target:num(x.target),emoji:typeof x.emoji==="string"?x.emoji:"💰"}));
@@ -614,15 +615,28 @@ function calcPeriod(p){
   else{let sb=0,ib=0;for(let i=0;i<D;i++){allow[i]=(B+ib+inc[i]-sb)/(D-i);sb+=spent[i];ib+=inc[i];}}
   const t=today();let ti=diffDays(p.start,t);const inP=ti>=0&&ti<D;ti=Math.max(0,Math.min(D-1,ti));
   let spentTo=0,incTo=0,fixedTo=0;for(let i=0;i<=ti;i++){spentTo+=spent[i];incTo+=inc[i];fixedTo+=fixed[i];}
-  return{D,dates,spent,inc,fixed,cnt,plan,mark,planTotal,budget:p.budget,B,base,allow,ti,inP,spentTo,incTo,fixedTo,remain:p.budget-planTotal+incTo-spentTo};
+  const dly=dates.map(d=>dailyAt(p,d)),curDaily=dailyAt(p,today()<p.start?p.start:today()>p.end?p.end:today());
+  return{dly,curDaily,D,dates,spent,inc,fixed,cnt,plan,mark,planTotal,budget:p.budget,B,base,allow,ti,inP,spentTo,incTo,fixedTo,remain:p.budget-planTotal+incTo-spentTo};
 }
-const isOk=(c,i)=>c.budget>0&&(c.spent[i]===0||c.spent[i]<=c.allow[i]+0.5);
+/* 日割りの額の履歴:設定で日割りが変わったら、その日から新しい額を基準にする */
+const pLen=p=>Math.max(1,diffDays(p.start,p.end)+1);
+function histOf(p){
+  const h=Array.isArray(p.hist)?p.hist.filter(x=>x&&okDate(x.from)&&isFinite(x.daily)):[];
+  return h.length?h.slice().sort((a,b)=>a.from<b.from?-1:1):[{from:p.start,daily:p.budget/pLen(p)}];
+}
+function dailyAt(p,d){const h=histOf(p);let v=h[0].daily;for(const x of h)if(x.from<=d)v=x.daily;return v;}
+/* その日の実際の支出(平均型で取り分けた予定も、当日を過ぎたら含める) */
+const usedOn=(c,i)=>c.spent[i]+(c.dates[i]<=today()?c.plan[i]:0);
+/* 予算内の判定:その日に有効だった日割りの額と比べる */
+const isOk=(c,i)=>{const v=usedOn(c,i);return c.budget>0&&(v===0||v<=c.dly[i]+0.5);};
+/* ストリーク用:変更後の日割りで達成していれば、さかのぼって達成とみなす */
+const isOkStreak=(c,i)=>{const v=usedOn(c,i);return c.budget>0&&(v===0||v<=Math.max(c.dly[i],c.curDaily)+0.5);};
 
 function streak(){
   const c=calcPeriod(S.period);let run=0;
   if(c.inP){
-    if(isOk(c,c.ti))run=1;else return 0;
-    for(let i=c.ti-1;i>=0;i--){if(isOk(c,i))run++;else return run;}
+    if(isOkStreak(c,c.ti))run=1;else return 0;
+    for(let i=c.ti-1;i>=0;i--){if(isOkStreak(c,i))run++;else return run;}
   }
   for(let a=S.archives.length-1;a>=0;a--){const ds=S.archives[a].days||[];for(let i=ds.length-1;i>=0;i--){if(ds[i]==="o"||ds[i]==="z")run++;else return run;}}
   return run;
@@ -632,7 +646,7 @@ function streak(){
 function summarize(p){
   const c=calcPeriod(p);
   let tot=c.planTotal,inc=0,fx=0,okN=0,zero=0;const days=[];const cats={};
-  for(let i=0;i<c.D;i++){tot+=c.spent[i];inc+=c.inc[i];fx+=c.fixed[i];const ok=isOk(c,i);if(ok)okN++;if(!c.spent[i]&&!c.plan[i])zero++;days.push(c.spent[i]===0?"z":ok?"o":"x");}
+  for(let i=0;i<c.D;i++){tot+=c.spent[i];inc+=c.inc[i];fx+=c.fixed[i];const ok=isOk(c,i);if(ok)okN++;if(!c.spent[i]&&!c.plan[i])zero++;days.push(usedOn(c,i)===0?"z":ok?"o":"x");}
   for(const e of S.expenses)if(e.type!=="in"&&e.group!=="fixed"&&e.date>=p.start&&e.date<=p.end)cats[e.group]=(cats[e.group]||0)+e.amount;
   const top=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
   return{start:p.start,end:p.end,budget:p.budget,income:inc,spent:tot,fixed:fx,okDays:okN,zeroDays:zero,days,D:c.D,topGroup:top?top[0]:null,topAmt:top?top[1]:0};
@@ -640,18 +654,19 @@ function summarize(p){
 /* 終わった期間の日付の記録を足したり消したりしたら、その期間の結果を計算し直す */
 function refreshArchiveFor(date){
   const a=S.archives.find(x=>date>=x.start&&date<=x.end);if(!a)return false;
-  Object.assign(a,summarize({start:a.start,end:a.end,budget:a.budget}),{id:a.id});return true;
+  Object.assign(a,summarize({start:a.start,end:a.end,budget:a.budget,hist:a.hist}),{id:a.id,hist:a.hist});return true;
 }
 function rollover(){
   let rolled=null;
   for(let guard=0;guard<36&&today()>S.period.end;guard++){
     const p=S.period,c=calcPeriod(p);
-    const arc=Object.assign({id:uid("p")},summarize(p));
+    const arc=Object.assign({id:uid("p"),hist:histOf(p)},summarize(p));
     if(p.budget>0||arc.spent>0)S.archives.push(arc);
     rolled=arc;
     const wasMonth=p.start.endsWith("-01")&&p.end===monthEnd(p.start);
     const ns=addDays(p.end,1);
-    S.period={start:ns,end:wasMonth?monthEnd(ns):addDays(ns,c.D-1),budget:p.budget};
+    const ne=wasMonth?monthEnd(ns):addDays(ns,c.D-1);
+    S.period={start:ns,end:ne,budget:p.budget,hist:[{from:ns,daily:p.budget/pLen({start:ns,end:ne})}]};
   }
   if(rolled&&rolled.budget>0){S.pendingResult=rolled.id;}
   if(rolled)save();
@@ -780,8 +795,8 @@ function renderStatsBase(){
   const first=parseD(p.start).getDay();
   let h=DOW.split("").map((w,i)=>`<div class="dow${i===0?" sun":i===6?" sat":""}">${w}</div>`).join("");
   for(let i=0;i<first;i++)h+=`<div class="cell off"></div>`;
-  let zero=0;const daily=c.budget/c.D;
-  for(let i=0;i<c.D;i++){
+  let zero=0;
+  for(let i=0;i<c.D;i++){const daily=c.dly[i];
     const ds=c.dates[i],d=parseD(ds),fut=ds>t,v=c.spent[i]+(fut?0:c.plan[i]);
     let dot;
     if(fut)dot=(c.mark[i]>0||c.inc[i]>0)?"plan":"fut";
@@ -868,17 +883,23 @@ function chartPace(c){
 function chartDaily(c){
   const D=c.D,t=today(),vals=c.dates.map((d,i)=>c.spent[i]+c.plan[i]);
   if(!c.budget&&!vals.some(Boolean)){emptyChart("chDaily","支出を記録すると、日ごとの棒グラフが出ます");return;}
-  const daily=c.budget/c.D;
-  const fr=frame(Math.max(...vals,c.base*1.6,daily*1.6,1)*1.05),pw=CW-ML-MR,bw=pw/D,X=i=>ML+i*bw,gap=Math.min(2,bw*.25);
+  const daily=c.curDaily;
+  const fr=frame(Math.max(...vals,c.base*1.6,...c.dly.map(x=>x*1.6),1)*1.05),pw=CW-ML-MR,bw=pw/D,X=i=>ML+i*bw,gap=Math.min(2,bw*.25);
   let bars="";
-  for(let i=0;i<D;i++){const v=vals[i];if(!v)continue;const h=Math.max(2,fr.Y(0)-fr.Y(Math.min(v,fr.t))),fut=c.dates[i]>t,over=!fut&&c.spent[i]>0&&!isOk(c,i);
+  for(let i=0;i<D;i++){const v=vals[i];if(!v)continue;const h=Math.max(2,fr.Y(0)-fr.Y(Math.min(v,fr.t))),fut=c.dates[i]>t,over=!fut&&v>0&&!isOk(c,i);
     bars+=`<rect x="${X(i)+gap/2}" y="${fr.Y(0)-h}" width="${Math.max(1,bw-gap)}" height="${h}" rx="${Math.min(3,bw/3)}" fill="${fut?"none":over?"var(--over)":"var(--sage)"}"${fut?' stroke="var(--over)" stroke-width="1.5"':""}/>`;}
   let st="";for(let i=0;i<D;i++){const y=fr.Y(Math.max(0,Math.min(c.allow[i],fr.t)));st+=`${i?"L":"M"}${X(i)} ${y} L${X(i)+bw} ${y} `;}
   const xl=[...new Set([0,Math.floor((D-1)/2),D-1])].map(i=>`<text x="${X(i)+bw/2}" y="${CHH-6}" text-anchor="middle">${md(c.dates[i])}</text>`).join("");
-  const dy=fr.Y(Math.min(daily,fr.t));
-  const dLine=c.budget?`<line x1="${ML}" x2="${CW-MR}" y1="${dy}" y2="${dy}" stroke="var(--sage-deep)" stroke-width="1.5"/><text x="${CW-MR}" y="${dy-5}" text-anchor="end" style="fill:var(--sage-deep);font-weight:700">日割り ${shortY(daily)}</text>`:"";
-  mount("chDaily",fr.g+bars+(c.budget?`<path d="${st}" fill="none" stroke="var(--muted)" stroke-width="1.3" stroke-dasharray="3 3"/>`:"")+dLine+xl,
-    {label:"日別の支出",xs:[...Array(D).keys()].map(i=>X(i)+bw/2),tip:i=>`${md(c.dates[i])}(${DOW[parseD(c.dates[i]).getDay()]})<br>使った額 <b>${yen(c.spent[i])}</b>${c.mark[i]?`<br>うち予定 ${yen(c.mark[i])}`:""}${c.inc[i]?`<br>収入 +${yen(c.inc[i])}`:""}<br>その日の枠 ${yen(c.allow[i])}<br>当初の日割り ${yen(daily)}`});
+  let dp="";for(let i=0;i<D;i++){const y=fr.Y(Math.min(c.dly[i],fr.t));dp+=`${i?"L":"M"}${X(i)} ${y} L${X(i)+bw} ${y} `;}
+  const ly=fr.Y(Math.min(c.dly[D-1],fr.t));
+  const dLine=c.budget?`<path d="${dp}" fill="none" stroke="var(--sage-deep)" stroke-width="1.5"/><text x="${CW-MR}" y="${ly-5}" text-anchor="end" style="fill:var(--sage-deep);font-weight:700">日割り ${shortY(c.dly[D-1])}</text>`:"";
+  /* 上端をこえた「その日の枠」は、切れていることが分かるよう ↑ と最大値を出す */
+  let clip="";
+  if(c.budget){let i=0;while(i<D){if(c.allow[i]>fr.t){let j=i,mx=0;while(j<D&&c.allow[j]>fr.t){mx=Math.max(mx,c.allow[j]);j++;}
+    const cx=(X(i)+X(j))/2,ty=fr.Y(fr.t);
+    clip+=`<path d="M${cx-4.5} ${ty+7} L${cx} ${ty+1} L${cx+4.5} ${ty+7} Z" fill="var(--muted)"/><text x="${cx}" y="${ty-4}" text-anchor="middle" style="fill:var(--muted);font-weight:700">↑${shortY(mx)}</text>`;i=j;}else i++;}}
+  mount("chDaily",fr.g+bars+(c.budget?`<path d="${st}" fill="none" stroke="var(--muted)" stroke-width="1.3" stroke-dasharray="3 3"/>`:"")+clip+dLine+xl,
+    {label:"日別の支出",xs:[...Array(D).keys()].map(i=>X(i)+bw/2),tip:i=>`${md(c.dates[i])}(${DOW[parseD(c.dates[i]).getDay()]})<br>使った額 <b>${yen(c.spent[i])}</b>${c.mark[i]?`<br>うち予定 ${yen(c.mark[i])}`:""}${c.inc[i]?`<br>収入 +${yen(c.inc[i])}`:""}<br>その日の枠 ${yen(c.allow[i])}<br>日割りの額 ${yen(c.dly[i])}`});
 }
 
 function chartDow(){
@@ -1151,7 +1172,7 @@ let fixedRedraw=null;
 function openDay(ds){
   const items=S.expenses.filter(e=>e.date===ds).slice().reverse(),c=calcPeriod(S.period),i=diffDays(S.period.start,ds);
   const d=parseD(ds),inP=i>=0&&i<c.D;
-  const dl=c.budget/c.D,used=inP?c.spent[i]+(ds>today()?0:c.plan[i]):0;
+  const dl=inP?c.dly[i]:0,used=inP?c.spent[i]+(ds>today()?0:c.plan[i]):0;
   const head=inP?`<div class="tiles" style="margin-top:0"><div class="tile"><div class="l">使った額</div><div class="v">${yen(c.spent[i])}</div>${c.plan[i]?`<div class="s">予定 ${yen(c.plan[i])}(取り分け済み)</div>`:""}</div><div class="tile"><div class="l">日割りの額</div><div class="v">${yen(dl)}</div><div class="s" style="color:${used>dl+0.5?"var(--soft-red)":"var(--ok)"}">${ds>today()?"これからの日":used>dl+0.5?yen(used-dl)+" オーバー":yen(dl-used)+" 残しました"}</div><div class="s">その日の枠 ${yen(c.allow[i])}</div></div></div>`:"";
   openSheet(`${d.getMonth()+1}月${d.getDate()}日(${DOW[d.getDay()]})`,head+`<div style="margin-top:12px">${items.length?items.map(rowHTML).join(""):`<div class="empty">記録はありません</div>`}</div>`);
   dayRedraw=()=>openDayRefresh(ds);
@@ -1307,7 +1328,16 @@ function applySettings(quiet){
   if(!draft)return false;
   if(diffDays(draft.start,draft.end)<0){if(!quiet)toast("終了日は開始日より後にしてください");return false;}
   if(draft.end<today()){if(!quiet)toast("終了日は今日以降にしてください");return false;}
-  S.nick=draft.nick.trim();S.inputMode=draft.inputMode;S.period={start:draft.start,end:draft.end,budget:draft.budget};S.income=draft.income;S.saveGoal=draft.saveGoal;
+  const old=S.period,np={start:draft.start,end:draft.end,budget:draft.budget},nd=np.budget/pLen(np);
+  const oh=histOf(old),neverSet=oh.every(x=>!x.daily);
+  if(old.start!==np.start||neverSet)np.hist=[{from:np.start,daily:nd}];
+  else{
+    const from=today()<np.start?np.start:today();
+    const h=oh.filter(x=>x.from<from);
+    if(!h.length||Math.abs(dailyAt(old,from)-nd)>0.5||oh.some(x=>x.from>=from))h.push({from,daily:nd});
+    np.hist=h.length?h:[{from:np.start,daily:nd}];
+  }
+  S.nick=draft.nick.trim();S.inputMode=draft.inputMode;S.period=np;S.income=draft.income;S.saveGoal=draft.saveGoal;
   save();renderHome();return true;
 }
 $("saveSet").onclick=()=>{if(applySettings(false)){draft=null;renderAll();toast("設定を保存しました");}};
