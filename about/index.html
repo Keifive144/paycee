@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Paycee. ペースいい、ペイシー。</title>
+<meta name="description" content="今日あといくら使えるかが、ひと目でわかる。予算を日割りして、余りも使いすぎも自然に翌日へ。口座連携なし・登録不要の家計アプリ。">
+<meta property="og:title" content="Paycee. ペースいい、ペイシー。">
+<meta property="og:description" content="今日あといくら使えるかが、ひと目でわかる家計アプリ。登録不要・口座連携なし。">
+<meta property="og:image" content="https://paycee.pages.dev/icon-512.png">
+<meta property="og:url" content="https://paycee.pages.dev/about/">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="icon" href="../icon-192.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<style>
+/* Layout: one calm column (max 960px). Hero with phone, three features, worked example, privacy, steps, FAQ, footer. App's sage-and-white identity. */
+:root{
+  --bg:#FFFFFF; --soft:#F3F3F4; --card:#FFFFFF; --ink:#1D2128; --muted:#5F6670; --faint:#9AA0A8; --line:#ECEDEF;
+  --sage:#7C9E8F; --sage-deep:#4F7666; --sage-soft:#E7EFEB; --gold:#E9B949;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+  --shadow:0 20px 50px rgba(30,45,38,.14);--frame:#1D2128;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111315; --soft:#181B1E; --card:#1B1E21; --ink:#ECEEF0; --muted:#A6ADB5; --faint:#6E747C; --line:#2A2E33;
+  --sage:#7FA997; --sage-deep:#9CC4B2; --sage-soft:#1F2C26; --gold:#E8BF45; --shadow:0 20px 50px rgba(0,0,0,.45);--frame:#2E3338; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111315; --soft:#181B1E; --card:#1B1E21; --ink:#ECEEF0; --muted:#A6ADB5; --faint:#6E747C; --line:#2A2E33;
+  --sage:#7FA997; --sage-deep:#9CC4B2; --sage-soft:#1F2C26; --gold:#E8BF45; --shadow:0 20px 50px rgba(0,0,0,.45);--frame:#2E3338; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+a{color:var(--sage-deep)}
+.wrap{max-width:960px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+section{padding-block:72px}
+section.alt{background:var(--soft)}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.35}
+h2{font-size:clamp(24px,5.6vw,32px);font-weight:800;letter-spacing:-.01em}
+.eyebrow{font-size:12.5px;font-weight:800;letter-spacing:.14em;color:var(--sage-deep);margin-bottom:10px}
+.lead{color:var(--muted);margin:14px 0 0;max-width:34em}
+.num{font-variant-numeric:tabular-nums}
+
+/* nav */
+nav.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+nav.top .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+.logo{font-size:22px;font-weight:800;letter-spacing:-.03em;color:var(--ink);text-decoration:none}
+.logo i{font-style:normal;color:var(--sage)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--sage);color:#fff;text-decoration:none;font-weight:800;border-radius:16px;padding:15px 26px;font-size:16px;transition:transform .15s,background .2s}
+.btn:hover{background:var(--sage-deep)}
+.btn:active{transform:scale(.98)}
+.btn.sm{padding:9px 16px;font-size:14px;border-radius:12px}
+:root[data-theme="dark"] .btn,:root[data-theme="dark"] .btn:hover{color:#111315}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn{color:#111315}}
+
+/* hero */
+.hero{padding-block:56px 64px;overflow:hidden}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
+.hero h1{font-size:clamp(34px,8.6vw,56px);font-weight:900;letter-spacing:-.03em;line-height:1.15}
+.nb{display:inline-block}
+.hero h1 em{font-style:normal;color:var(--sage-deep)}
+.tagline{font-size:15px;font-weight:700;color:var(--sage-deep);letter-spacing:.06em;margin-bottom:14px}
+.cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:28px}
+.cta small{color:var(--faint);font-size:13px}
+.phone{width:min(300px,78vw);margin:0 auto;border-radius:38px;padding:9px;background:var(--frame);box-shadow:var(--shadow);position:relative}
+.phone img{border-radius:30px;width:100%;height:auto;aspect-ratio:390/780;object-fit:cover;object-position:top;background:var(--soft)}
+.hero .phone{transform:rotate(2deg)}
+.badge{position:absolute;left:-22px;bottom:70px;background:var(--card);border-radius:16px;padding:10px 14px;box-shadow:0 10px 30px rgba(0,0,0,.12);font-size:13px;line-height:1.4;transform:rotate(-2deg)}
+.badge b{display:block;font-size:17px;color:var(--sage-deep)}
+
+/* features */
+.feats{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px}
+.feat{background:var(--card);border-radius:24px;padding:26px 24px;border:1px solid var(--line)}
+.feat .ic{width:48px;height:48px;border-radius:14px;background:var(--sage-soft);display:grid;place-items:center;font-size:24px;margin-bottom:16px}
+.feat h3{font-size:18px;margin-bottom:8px}
+.feat p{margin:0;color:var(--muted);font-size:15px}
+
+/* example */
+.ex{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+.days{display:flex;flex-direction:column;gap:10px;margin-top:28px}
+.day{display:grid;grid-template-columns:4.2em 1fr auto;gap:14px;align-items:center;background:var(--card);border-radius:16px;padding:14px 16px;border:1px solid var(--line)}
+.day .d{font-weight:800;font-size:14px;color:var(--muted)}
+.day .bar{height:8px;background:var(--soft);border-radius:99px;overflow:hidden}
+.day .bar i{display:block;height:100%;background:var(--sage);border-radius:99px}
+.day .bar i.over{background:var(--gold)}
+.day .v{font-size:14px;text-align:right;line-height:1.4;min-width:8.5em}
+.day .v b{display:block;font-size:16px}
+.note{font-size:13.5px;color:var(--muted);margin-top:14px}
+.modes{display:grid;gap:12px}
+.mode{border-radius:20px;padding:20px 22px;background:var(--card);border:1px solid var(--line)}
+.mode b{font-size:17px}
+.mode p{margin:6px 0 0;font-size:14.5px;color:var(--muted)}
+
+/* gallery */
+.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px}
+.gallery figure{margin:0}
+.gallery .phone{width:100%;max-width:260px;border-radius:32px;padding:7px}
+.gallery .phone img{border-radius:26px}
+.gallery figcaption{text-align:center;margin-top:16px;font-size:14.5px;color:var(--muted)}
+.gallery figcaption b{display:block;color:var(--ink);font-size:16px}
+
+/* trust */
+.trust{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:36px}
+.trust div{border-top:2px solid var(--sage);padding-top:14px}
+.trust b{display:block;font-size:17px;margin-bottom:4px}
+.trust p{margin:0;color:var(--muted);font-size:14.5px}
+
+/* steps */
+.steps{list-style:none;margin:36px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;counter-reset:s}
+.steps li{background:var(--card);border-radius:22px;padding:24px;border:1px solid var(--line);counter-increment:s;position:relative}
+.steps li::before{content:counter(s);display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--sage);color:#fff;font-weight:800;font-size:15px;margin-bottom:14px}
+.steps b{display:block;font-size:16px;margin-bottom:6px}
+.steps p{margin:0;font-size:14.5px;color:var(--muted)}
+.steps svg{width:20px;height:20px;vertical-align:-4px;color:var(--sage-deep)}
+
+/* faq */
+.faq{margin-top:32px;border-top:1px solid var(--line)}
+.faq details{border-bottom:1px solid var(--line)}
+.faq summary{list-style:none;cursor:pointer;padding:20px 36px 20px 0;font-weight:700;position:relative}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"";position:absolute;right:8px;top:50%;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-70%) rotate(45deg);transition:transform .2s}
+.faq details[open] summary::after{transform:translateY(-30%) rotate(-135deg)}
+.faq details p{margin:0 0 20px;color:var(--muted);font-size:15px}
+
+/* policy + footer */
+.policy{font-size:14.5px;color:var(--muted);max-width:44em}
+.policy h3{font-size:16px;color:var(--ink);margin:24px 0 6px}
+.policy p{margin:0}
+.final{text-align:center}
+.final .lead{margin-inline:auto}
+.final .cta{justify-content:center}
+footer{padding-block:32px calc(32px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);font-size:13px;color:var(--faint)}
+footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+footer a{color:var(--muted);text-decoration:none;margin-left:16px}
+:focus-visible{outline:2px solid var(--sage);outline-offset:3px;border-radius:6px}
+
+@media (max-width:760px){
+  section{padding-block:56px}
+  .hero{padding-block:36px 52px}
+  .hero .wrap,.ex{grid-template-columns:1fr}
+  .hero .phone{margin-top:8px}
+  .badge{left:-6px}
+  .feats,.trust,.steps{grid-template-columns:1fr}
+  .gallery{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:72%;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px;margin-inline:calc(-1*max(20px,env(safe-area-inset-left,0px)));padding-inline:max(20px,env(safe-area-inset-left,0px))}
+  .gallery figure{scroll-snap-align:center}
+}
+@media (prefers-reduced-motion:no-preference){
+  .hero h1,.hero .tagline,.hero .lead,.hero .cta{animation:up .7s ease both}
+  .hero .lead{animation-delay:.08s}.hero .cta{animation-delay:.16s}
+  .hero .phone{animation:phone .9s .1s ease both}
+}
+@keyframes up{from{opacity:.001;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes phone{from{opacity:.001;transform:translateY(24px) rotate(2deg)}to{opacity:1;transform:rotate(2deg)}}
+</style>
+</head>
+<body>
+
+<nav class="top"><div class="wrap">
+  <a class="logo" href="./">Paycee<i>.</i></a>
+  <a class="btn sm" href="../">使ってみる</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <div>
+    <div class="tagline">ペースいい、ペイシー。</div>
+    <h1><span class="nb">今日あと<em>いくら</em></span><span class="nb">使えるか、</span><br><span class="nb">ひと目でわかる。</span></h1>
+    <p class="lead">予算を1日ずつに分けて、今日使っていい額を大きく表示。余った分も使いすぎた分も、翌日に自然に反映されます。家計簿が続かなかった人のための、いちばん軽い家計アプリです。</p>
+    <div class="cta"><a class="btn" href="../">無料で使ってみる</a><small>登録不要 · 口座連携なし</small></div>
+  </div>
+  <div class="phone">
+    <img src="shot-home.jpg" alt="ホーム画面。今日あと使える額 17,901円、残額 35,320円、残り10日と表示されている" width="390" height="780">
+    <div class="badge">21日連続<b>予算内 🔥</b></div>
+  </div>
+</div></header>
+
+<section class="alt"><div class="wrap">
+  <div class="eyebrow">WHAT IT DOES</div>
+  <h2>見るのは、ひとつの数字だけ。</h2>
+  <p class="lead">細かい家計簿をつける必要はありません。使ったら金額を入れる。Paycee.が今日の残りを計算します。</p>
+  <div class="feats">
+    <div class="feat"><div class="ic">👀</div><h3>今日の残りが、すぐわかる</h3><p>開いた瞬間に「今日あと使える額」。買う前にちらっと見るだけで、使いすぎに気づけます。</p></div>
+    <div class="feat"><div class="ic">🌱</div><h3>余りも、使いすぎも、なめらかに</h3><p>今日の余りは明日の枠に。使いすぎた日も、残りの日で取り戻せる額をそっと教えてくれます。</p></div>
+    <div class="feat"><div class="ic">🎯</div><h3>続けたくなる仕組み</h3><p>連続達成の記録、期間の終わりのふり返り、車や旅行の貯金目標。節約が目標に近づく実感になります。</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap ex">
+  <div>
+    <div class="eyebrow">HOW IT WORKS</div>
+    <h2><span class="nb">予算6万円・30日なら、</span><span class="nb">1日2,000円から。</span></h2>
+    <p class="lead">使った額を入れるだけで、翌日の枠が自動で変わります。下は「繰越型」の例です。</p>
+    <div class="days">
+      <div class="day"><span class="d">1日目</span><span class="bar"><i style="width:75%"></i></span><span class="v num">1,500円使用<b>500円 残し</b></span></div>
+      <div class="day"><span class="d">2日目</span><span class="bar"><i style="width:56%"></i></span><span class="v num">枠 2,500円<b>1,400円 使用</b></span></div>
+      <div class="day"><span class="d">3日目</span><span class="bar"><i class="over" style="width:100%"></i></span><span class="v num">枠 3,100円<b>4,000円 使用</b></span></div>
+      <div class="day"><span class="d">4日目</span><span class="bar"><i style="width:0%"></i></span><span class="v num">枠 1,100円<b>そっと調整</b></span></div>
+    </div>
+    <p class="note">使いすぎた翌日は枠が小さくなるだけ。責められることはありません。</p>
+  </div>
+  <div class="modes">
+    <div class="mode"><b>繰越型</b><p>余った分も使いすぎた分も、そのまま翌日の枠へ。今日の頑張りがすぐ数字に出ます。</p></div>
+    <div class="mode"><b>平均型</b><p>余りや使いすぎを、残りの日に均等に配分。毎日の枠がなだらかに変わります。</p></div>
+    <div class="mode"><b>期間は自由に</b><p>毎月1日〜月末でも、給料日から次の給料日まででも。期間が終わると、次の期間が自動で始まります。</p></div>
+  </div>
+</div></section>
+
+<section class="alt"><div class="wrap">
+  <div class="eyebrow">SCREENS</div>
+  <h2>ふり返りも、気持ちよく。</h2>
+  <div class="gallery">
+    <figure><div class="phone"><img src="shot-entry.jpg" alt="よく使う支出をワンタップで記録できる入力画面と、貯金目標の進み具合" width="390" height="780" loading="lazy"></div><figcaption><b>ワンタップで記録</b>よく使う支出はボタンひとつ</figcaption></figure>
+    <figure><div class="phone"><img src="shot-stats.jpg" alt="分析画面。今期使った額、予算の使用率、着地見込み、支出の累計グラフ" width="390" height="780" loading="lazy"></div><figcaption><b>着地が見える</b>このままだと月末いくら残るか</figcaption></figure>
+    <figure><div class="phone"><img src="shot-cal.jpg" alt="日別の支出グラフと、日ごとの使い方を色で示すカレンダー" width="390" height="780" loading="lazy"></div><figcaption><b>カレンダーでふり返り</b>使いすぎた日がひと目でわかる</figcaption></figure>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="eyebrow">PRIVACY</div>
+  <h2><span class="nb">あなたのお金の情報は、</span><span class="nb">あなたの端末の中だけに。</span></h2>
+  <div class="trust">
+    <div><b>銀行口座とつながない</b><p>口座やカードの連携は一切ありません。入力するのは、使った金額だけ。</p></div>
+    <div><b>登録もログインも不要</b><p>メールアドレスも名前もいりません。開いたその日から使えます。</p></div>
+    <div><b>データは端末の中</b><p>記録はお使いの端末にだけ保存され、外部には送られません。バックアップも自分で書き出せます。</p></div>
+  </div>
+</div></section>
+
+<section class="alt" id="start"><div class="wrap">
+  <div class="eyebrow">GET STARTED</div>
+  <h2><span class="nb">ホーム画面に置いて、</span><span class="nb">アプリのように。</span></h2>
+  <p class="lead">インストールは不要です。iPhoneならSafariで、次の3ステップ。</p>
+  <ol class="steps">
+    <li><b>Safariで開く</b><p><a href="../">paycee.pages.dev</a> をSafariで開きます。</p></li>
+    <li><b>共有ボタンを押す</b><p>画面下の <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="共有"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg> から「ホーム画面に追加」を選びます。</p></li>
+    <li><b>アイコンから起動</b><p>ホーム画面の「P.」から、全画面のアプリとして開けます。電波がなくても使えます。</p></li>
+  </ol>
+  <p class="note">Androidは、Chromeのメニューから「ホーム画面に追加」を選んでください。</p>
+</div></section>
+
+<section><div class="wrap">
+  <div class="eyebrow">FAQ</div>
+  <h2>よくある質問</h2>
+  <div class="faq">
+    <details><summary>無料で使えますか?</summary><p>はい。現在すべての機能を無料で使えます。</p></details>
+    <details><summary>家賃などの固定費はどう扱いますか?</summary><p>固定費は「今日あと使える額」とは別に管理します。予算には食費や日用品など、日々の支出に使う額を入れてください。引き落とし日を登録すると、その日に自動で記録されます。</p></details>
+    <details><summary>機種変更するときは?</summary><p>設定の「バックアップを書き出す」でファイルを保存し、新しい端末の「バックアップを読み込む」で選ぶと、記録をそのまま引き継げます。</p></details>
+    <details><summary>途中で予算を変えたら、どうなりますか?</summary><p>変えた日から「新しい予算 − それまでに使った額」を残りの日数で均等に分けます。それより前の日の記録や判定は変わりません。</p></details>
+    <details><summary>電波がなくても使えますか?</summary><p>はい。一度開いたあとは、圏外でも記録や確認ができます。</p></details>
+  </div>
+</div></section>
+
+<section class="alt final"><div class="wrap">
+  <h2>今日から、ペースいい毎日を。</h2>
+  <p class="lead">まずは今日の分から。開いて、予算を入れるだけです。</p>
+  <div class="cta"><a class="btn" href="../">無料で使ってみる</a></div>
+</div></section>
+
+<section id="privacy"><div class="wrap policy">
+  <div class="eyebrow">POLICY</div>
+  <h2 style="font-size:22px">プライバシーポリシー</h2>
+  <h3>収集する情報</h3><p>Paycee.は、氏名・メールアドレス・口座情報などの個人情報を収集しません。入力された支出・収入・貯金などの記録は、お使いの端末内にのみ保存され、運営者のサーバーには送信されません。</p>
+  <h3>アクセスの記録</h3><p>このサイトは配信のためにCloudflareを利用しています。配信の過程で、アクセス日時やIPアドレスなどの技術的な情報がCloudflareに記録される場合があります。</p>
+  <h3>データの削除</h3><p>記録は、アプリの設定にある「すべての記録を削除」、またはブラウザのサイトデータの削除で消去できます。</p>
+  <h3>お問い合わせ</h3><p id="support">お問い合わせ窓口は準備中です。</p>
+  <p style="margin-top:20px;color:var(--faint)">制定日:2026年10月23日</p>
+</div></section>
+
+<footer><div class="wrap">
+  <span>© 2026 Paycee.</span>
+  <span><a href="#privacy">プライバシーポリシー</a><a href="../">アプリを開く</a></span>
+</div></footer>
+
+</body>
+</html>

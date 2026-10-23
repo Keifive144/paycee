@@ -37,7 +37,7 @@ header.bar .inner{display:flex;align-items:center;justify-content:space-between;
 .logo b{font-size:24px;font-weight:800;letter-spacing:-.03em}
 .logo b i{font-style:normal;color:var(--sage)}
 .logo span{font-size:11.5px;color:var(--muted);margin-top:5px;letter-spacing:.06em}
-.page-title{font-size:19px;font-weight:800;margin:0}
+.page-title{font-size:19px;font-weight:800;margin:0;white-space:nowrap;flex:0 0 auto}
 
 /* segmented */
 .seg{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--field);border-radius:14px;padding:4px;gap:2px}
@@ -501,7 +501,7 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
         <button class="btn" type="button" id="resetYes" style="background:var(--soft-red)">削除する</button>
       </div>
     </div>
-    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 18<br>画面を左右にスワイプするとタブを切り替えられます。</div>
+    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 19<br>画面を左右にスワイプするとタブを切り替えられます。</div>
   </section>
   </div>
 </main>
@@ -1101,7 +1101,7 @@ function renderKpis(c,pace){
    `<div class="tile"><div class="l">今期使った額</div><div class="v">${yen(used)}</div><div class="s">${c.planTotal?`うち予定 ${yen(c.planTotal)}`:`${md(S.period.start)}から`}</div></div>`+
    `<div class="tile"><div class="l">予算の使用率</div><div class="v">${useP}<small>%</small></div><div class="s ${useP<=el?"good":"bad"}">期間の経過 ${el}%</div></div>`+
    `<div class="tile"><div class="l">1日平均</div><div class="v">${yen(pace.avg)}</div><div class="s">予算の1日分 ${yen(c.budget/c.D)}</div></div>`+
-   `<div class="tile"><div class="l">着地見込み</div><div class="v">${yen(pace.end)}</div><div class="s ${diff>=0?"good":"bad"}">${diff>=0?"予算より "+yen(diff)+" 少ない":"予算を "+yen(-diff)+" こえる"}</div></div>`;
+   `<div class="tile"><div class="l">着地見込み</div><div class="v">${yen(pace.end)}</div><div class="s ${diff>=0?"good":"bad"}">${diff>=0?yen(diff)+" 残る見込み":yen(-diff)+" こえる見込み"}</div></div>`;
 }
 function renderChartsAll(){const c=calcPeriod(S.period),pace=chartPace(c);chartDaily(c);chartDow();chartPer(c);chartSave();renderKpis(c,pace);}
 

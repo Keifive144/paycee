@@ -84,6 +84,8 @@ self.addEventListener("activate",e=>{{e.waitUntil(caches.keys().then(ks=>Promise
 self.addEventListener("fetch",e=>{{
   const r=e.request;if(r.method!=="GET")return;
   if(r.mode==="navigate"){{
+    const path=new URL(r.url).pathname,root=new URL(self.registration.scope).pathname;
+    if(path!==root&&path!==root+"index.html")return; /* 紹介ページなどはそのまま通す */
     /* 画面本体はネット優先:つながっていれば常に最新版、圏外ならキャッシュ */
     e.respondWith(fetch(r).then(res=>{{const cp=res.clone();caches.open(V).then(c=>c.put("./index.html",cp));return res;}}).catch(()=>caches.match("./index.html")));
     return;
