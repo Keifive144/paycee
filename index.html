@@ -493,7 +493,7 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
         <button class="btn" type="button" id="resetYes" style="background:var(--soft-red)">削除する</button>
       </div>
     </div>
-    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 16<br>画面を左右にスワイプするとタブを切り替えられます。</div>
+    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 17<br>画面を左右にスワイプするとタブを切り替えられます。</div>
   </section>
   </div>
 </main>
@@ -626,10 +626,17 @@ function calcPeriod(p){
   }
   /* 平均型:予定の支出は期間の予算から先に取り分ける。繰越型:予定はその日が来た時に、その日の支出として差し引く */
   const planTotal=plan.reduce((a,v)=>a+v,0);
-  const B=p.budget-planTotal,base=B/D,allow=Array(D).fill(0);
-  if(S.mode==="carry"){let c=0;for(let i=0;i<D;i++){allow[i]=base+c+inc[i];c=allow[i]-spent[i];}}
-  else{let sb=0,ib=0;for(let i=0;i<D;i++){allow[i]=(B+ib+inc[i]-sb)/(D-i);sb+=spent[i];ib+=inc[i];}}
+  const B=p.budget-planTotal,allow=Array(D).fill(0),bases=Array(D).fill(0);
+  /* 予算を途中で変えた場合:変えた日を新しいスタートにして、
+     「その時点の予算 − それまでに使った額」を残りの日数で均等に分ける(それより前の日の枠は変えない) */
+  const h=histOf(p),seg=dates.map(d=>{let k=0;h.forEach((x,j)=>{if(x.from<=d)k=j;});return k;});
+  const segB=k=>{const e=h[k];return(isFinite(e.budget)?e.budget:Math.round(e.daily*D))-planTotal;};
+  if(S.mode==="carry"){let c=0,b=0,sb=0,ib=0;for(let i=0;i<D;i++){
+    if(i===0||seg[i]!==seg[i-1]){b=(segB(seg[i])+ib-sb)/(D-i);c=0;}
+    bases[i]=b;allow[i]=b+c+inc[i];c=allow[i]-spent[i];sb+=spent[i];ib+=inc[i];}}
+  else{let sb=0,ib=0;for(let i=0;i<D;i++){const bb=segB(seg[i]);bases[i]=bb/D;allow[i]=(bb+ib+inc[i]-sb)/(D-i);sb+=spent[i];ib+=inc[i];}}
   const t=today();let ti=diffDays(p.start,t);const inP=ti>=0&&ti<D;ti=Math.max(0,Math.min(D-1,ti));
+  const base=bases[ti];
   let spentTo=0,incTo=0,fixedTo=0;for(let i=0;i<=ti;i++){spentTo+=spent[i];incTo+=inc[i];fixedTo+=fixed[i];}
   const dly=dates.map(d=>dailyAt(p,d)),curDaily=dailyAt(p,today()<p.start?p.start:today()>p.end?p.end:today());
   return{dly,curDaily,D,dates,spent,inc,fixed,cnt,plan,mark,planTotal,budget:p.budget,B,base,allow,ti,inP,spentTo,incTo,fixedTo,remain:p.budget-planTotal+incTo-spentTo};
@@ -642,18 +649,7 @@ function histOf(p){
 }
 /* ストリーク用の「その日の枠」:その日に有効だった予算で計算した枠を使う。
    予算を変えた日より前の日は、変える前の予算の枠のまま判定し、さかのぼって判定し直さない */
-function streakAllow(p,c){
-  const h=histOf(p),out=c.allow.slice(),memo={};
-  for(let i=0;i<c.D;i++){
-    let e=h[0];for(const x of h)if(x.from<=c.dates[i])e=x;
-    const b=isFinite(e.budget)?e.budget:Math.round(e.daily*pLen(p)),end=okDate(e.end)?e.end:p.end;
-    if(b===p.budget&&end===p.end)continue;
-    const k=b+"|"+end;
-    if(!memo[k])memo[k]=calcPeriod({start:p.start,end,budget:b});
-    const j=diffDays(p.start,c.dates[i]);if(j<memo[k].D)out[i]=memo[k].allow[j];
-  }
-  return out;
-}
+function streakAllow(p,c){return c.allow;} /* 枠そのものが「その日に有効だった予算」で計算されている */
 function dailyAt(p,d){const h=histOf(p);let v=h[0].daily;for(const x of h)if(x.from<=d)v=x.daily;return v;}
 /* その日の実際の支出(平均型で取り分けた予定も、当日を過ぎたら含める) */
 const usedOn=(c,i)=>c.spent[i]+(c.dates[i]<=today()?c.plan[i]:0);
