@@ -493,7 +493,7 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
         <button class="btn" type="button" id="resetYes" style="background:var(--soft-red)">削除する</button>
       </div>
     </div>
-    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 15<br>画面を左右にスワイプするとタブを切り替えられます。</div>
+    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 16<br>画面を左右にスワイプするとタブを切り替えられます。</div>
   </section>
   </div>
 </main>
@@ -570,7 +570,7 @@ function sanitize(s){
   const p=s.period&&typeof s.period==="object"?s.period:{};
   s.period={start:okDate(p.start)?p.start:f.period.start,end:okDate(p.end)?p.end:f.period.end,budget:num(p.budget)};
   if(s.period.end<s.period.start)s.period={start:f.period.start,end:f.period.end,budget:s.period.budget};
-  s.period.hist=histOf(Object.assign({},s.period,{hist:Array.isArray(p.hist)?p.hist.map(x=>x&&{from:x.from,daily:+x.daily}):[]}));
+  s.period.hist=histOf(Object.assign({},s.period,{hist:Array.isArray(p.hist)?p.hist.map(x=>x&&Object.assign({from:x.from,daily:+x.daily},isFinite(+x.budget)&&x.budget!==undefined&&x.budget!==null?{budget:+x.budget}:{},okDate(x.end)?{end:x.end}:{})):[]}));
   s.expenses=arr(s.expenses).filter(e=>e&&okDate(e.date)&&num(e.amount)>0).map(e=>({id:typeof e.id==="string"&&e.id?e.id:uid("e"),date:e.date,amount:num(e.amount),type:e.type==="in"?"in":"out",group:gk(e.group),cat:typeof e.cat==="string"?e.cat:"",memo:typeof e.memo==="string"?e.memo:"",...(e.planned?{planned:true}:{}),...(e.auto?{auto:true}:{})}));
   s.fixed=arr(s.fixed).filter(x=>x&&x.name&&num(x.amount)).map(x=>({id:x.id||uid("f"),name:String(x.name),amount:num(x.amount),day:+x.day||0,since:okDate(x.since)?x.since:today()}));
   s.goals=arr(s.goals).filter(x=>x&&x.name).map(x=>({id:x.id||uid("g"),name:String(x.name),target:num(x.target),emoji:typeof x.emoji==="string"?x.emoji:"💰"}));
@@ -638,7 +638,21 @@ function calcPeriod(p){
 const pLen=p=>Math.max(1,diffDays(p.start,p.end)+1);
 function histOf(p){
   const h=Array.isArray(p.hist)?p.hist.filter(x=>x&&okDate(x.from)&&isFinite(x.daily)):[];
-  return h.length?h.slice().sort((a,b)=>a.from<b.from?-1:1):[{from:p.start,daily:p.budget/pLen(p)}];
+  return h.length?h.slice().sort((a,b)=>a.from<b.from?-1:1):[{from:p.start,daily:p.budget/pLen(p),budget:p.budget,end:p.end}];
+}
+/* ストリーク用の「その日の枠」:その日に有効だった予算で計算した枠を使う。
+   予算を変えた日より前の日は、変える前の予算の枠のまま判定し、さかのぼって判定し直さない */
+function streakAllow(p,c){
+  const h=histOf(p),out=c.allow.slice(),memo={};
+  for(let i=0;i<c.D;i++){
+    let e=h[0];for(const x of h)if(x.from<=c.dates[i])e=x;
+    const b=isFinite(e.budget)?e.budget:Math.round(e.daily*pLen(p)),end=okDate(e.end)?e.end:p.end;
+    if(b===p.budget&&end===p.end)continue;
+    const k=b+"|"+end;
+    if(!memo[k])memo[k]=calcPeriod({start:p.start,end,budget:b});
+    const j=diffDays(p.start,c.dates[i]);if(j<memo[k].D)out[i]=memo[k].allow[j];
+  }
+  return out;
 }
 function dailyAt(p,d){const h=histOf(p);let v=h[0].daily;for(const x of h)if(x.from<=d)v=x.daily;return v;}
 /* その日の実際の支出(平均型で取り分けた予定も、当日を過ぎたら含める) */
@@ -646,13 +660,13 @@ const usedOn=(c,i)=>c.spent[i]+(c.dates[i]<=today()?c.plan[i]:0);
 /* 予算内の判定:その日に有効だった日割りの額と比べる */
 const isOk=(c,i)=>{const v=usedOn(c,i);return c.budget>0&&(v===0||v<=c.dly[i]+0.5);};
 /* ストリーク用:繰越込みの「その日の枠」で判定(予算を変えると枠が計算し直され、さかのぼって反映される) */
-const isOkStreak=(c,i)=>c.budget>0&&(c.spent[i]===0||c.spent[i]<=c.allow[i]+0.5);
+const isOkStreak=(c,i,sa)=>c.budget>0&&(c.spent[i]===0||c.spent[i]<=(sa?sa[i]:c.allow[i])+0.5);
 
 function streak(){
-  const c=calcPeriod(S.period);let run=0;
+  const c=calcPeriod(S.period),sa=streakAllow(S.period,c);let run=0;
   if(c.inP){
-    if(isOkStreak(c,c.ti))run=1;else return 0;
-    for(let i=c.ti-1;i>=0;i--){if(isOkStreak(c,i))run++;else return run;}
+    if(isOkStreak(c,c.ti,sa))run=1;else return 0;
+    for(let i=c.ti-1;i>=0;i--){if(isOkStreak(c,i,sa))run++;else return run;}
   }
   for(let a=S.archives.length-1;a>=0;a--){const ds=S.archives[a].sdays||S.archives[a].days||[];for(let i=ds.length-1;i>=0;i--){if(ds[i]==="o"||ds[i]==="z")run++;else return run;}}
   return run;
@@ -660,9 +674,9 @@ function streak(){
 
 /* ---------- period rollover ---------- */
 function summarize(p){
-  const c=calcPeriod(p);
+  const c=calcPeriod(p),sa=streakAllow(p,c);
   let tot=c.planTotal,inc=0,fx=0,okN=0,zero=0;const days=[],sdays=[];const cats={};
-  for(let i=0;i<c.D;i++){tot+=c.spent[i];inc+=c.inc[i];fx+=c.fixed[i];const ok=isOk(c,i);if(ok)okN++;if(!c.spent[i]&&!c.plan[i])zero++;days.push(usedOn(c,i)===0?"z":ok?"o":"x");sdays.push(c.spent[i]===0?"z":isOkStreak(c,i)?"o":"x");}
+  for(let i=0;i<c.D;i++){tot+=c.spent[i];inc+=c.inc[i];fx+=c.fixed[i];const ok=isOk(c,i);if(ok)okN++;if(!c.spent[i]&&!c.plan[i])zero++;days.push(usedOn(c,i)===0?"z":ok?"o":"x");sdays.push(c.spent[i]===0?"z":isOkStreak(c,i,sa)?"o":"x");}
   for(const e of S.expenses)if(e.type!=="in"&&e.group!=="fixed"&&e.date>=p.start&&e.date<=p.end)cats[e.group]=(cats[e.group]||0)+e.amount;
   const top=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
   return{start:p.start,end:p.end,budget:p.budget,income:inc,spent:tot,fixed:fx,okDays:okN,zeroDays:zero,days,sdays,D:c.D,topGroup:top?top[0]:null,topAmt:top?top[1]:0};
@@ -682,7 +696,7 @@ function rollover(){
     const wasMonth=p.start.endsWith("-01")&&p.end===monthEnd(p.start);
     const ns=addDays(p.end,1);
     const ne=wasMonth?monthEnd(ns):addDays(ns,c.D-1);
-    S.period={start:ns,end:ne,budget:p.budget,hist:[{from:ns,daily:p.budget/pLen({start:ns,end:ne})}]};
+    S.period={start:ns,end:ne,budget:p.budget,hist:[{from:ns,daily:p.budget/pLen({start:ns,end:ne}),budget:p.budget,end:ne}]};
   }
   if(rolled&&rolled.budget>0){S.pendingResult=rolled.id;}
   if(rolled)save();
@@ -1346,12 +1360,15 @@ function applySettings(quiet){
   if(draft.end<today()){if(!quiet)toast("終了日は今日以降にしてください");return false;}
   const old=S.period,np={start:draft.start,end:draft.end,budget:draft.budget},nd=np.budget/pLen(np);
   const oh=histOf(old),neverSet=oh.every(x=>!x.daily);
-  if(old.start!==np.start||neverSet)np.hist=[{from:np.start,daily:nd}];
+  const ent=from=>({from,daily:nd,budget:np.budget,end:np.end});
+  if(old.start!==np.start||neverSet)np.hist=[ent(np.start)];
   else{
     const from=today()<np.start?np.start:today();
+    let cur=oh[0];for(const x of oh)if(x.from<from)cur=x;
+    const curB=isFinite(cur.budget)?cur.budget:Math.round(cur.daily*pLen(old)),curE=okDate(cur.end)?cur.end:old.end;
     const h=oh.filter(x=>x.from<from);
-    if(!h.length||Math.abs(dailyAt(old,from)-nd)>0.5||oh.some(x=>x.from>=from))h.push({from,daily:nd});
-    np.hist=h.length?h:[{from:np.start,daily:nd}];
+    if(!h.length||curB!==np.budget||curE!==np.end||oh.some(x=>x.from>=from))h.push(ent(from));
+    np.hist=h.length?h:[ent(np.start)];
   }
   S.nick=draft.nick.trim();S.inputMode=draft.inputMode;S.period=np;S.income=draft.income;S.saveGoal=draft.saveGoal;
   save();renderHome();return true;
