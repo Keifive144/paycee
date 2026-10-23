@@ -7,7 +7,7 @@
   --sage:#7C9E8F; --sage-deep:#5D8474; --sage-soft:#E7EFEB; --sage-dot:#8FB0A2; --sage-light:#C9D9D1;
   --ok:#22A04B; --warn:#E08A1E; --over:#F4C542; --soft-red:#D96A5B; --flame:#F08A2B; --sun:#E5737A; --sat:#6FA5DC;
   --shadow:0 2px 12px rgba(20,30,40,.06); --header:#FFFFFF;
-  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Noto Sans CJK JP",system-ui,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#111315; --card:#1B1E21; --field:#25292D; --ink:#ECEEF0; --muted:#A0A6AE; --faint:#6E747C; --line:#2A2E33;
@@ -501,7 +501,7 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
         <button class="btn" type="button" id="resetYes" style="background:var(--soft-red)">削除する</button>
       </div>
     </div>
-    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 19<br>画面を左右にスワイプするとタブを切り替えられます。</div>
+    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 20<br>画面を左右にスワイプするとタブを切り替えられます。</div>
   </section>
   </div>
 </main>
@@ -870,8 +870,9 @@ function openOnboarding(){
     <div class="ob-step">STEP 1</div><h3>期間の区切り</h3>
     <div class="opts" id="obCyc"><button type="button" class="opt" data-cyc="1" aria-pressed="true"><b>毎月1日〜月末</b><small>カレンダーどおりに1か月ずつ</small></button><button type="button" class="opt" data-cyc="pay" aria-pressed="false"><b>給料日から</b><small>給料日〜次の給料日の前日まで</small></button></div>
     <select class="field" id="obDay" hidden>${[...Array(27)].map((_,i)=>`<option value="${i+2}"${i+2===25?" selected":""}>毎月${i+2}日から</option>`).join("")}</select>
-    <div class="ob-step">STEP 2</div><h3>この期間に使っていい額</h3>
-    <div class="yfield"><span>¥</span><input class="field" id="obBud" inputmode="numeric" placeholder="例 60,000"></div>
+    <div class="ob-step">STEP 2</div><h3>使っていい額</h3>
+    <div class="seg wide" id="obIn" style="margin-bottom:10px"><button type="button" data-obin="total" aria-pressed="true">期間の予算で決める</button><button type="button" data-obin="daily" aria-pressed="false">1日あたりで決める</button></div>
+    <div class="yfield"><span>¥</span><input class="field" id="obBud" inputmode="numeric" placeholder="例 60,000" aria-label="使っていい額"></div>
     <p class="hint" style="margin:8px 0 0">食費・日用品・交際費など、日々の支出に使う額です。家賃などの固定費は含めません。迷ったら「手取り − 固定費 − 貯金」が目安です。</p>
     <p class="hint" id="obDaily" style="margin:6px 0 0"></p>
     <div class="ob-step">STEP 3</div><h3>余りや使いすぎの扱い</h3>
@@ -879,14 +880,23 @@ function openOnboarding(){
     <button class="btn" type="button" id="obGo" style="margin-top:20px">はじめる</button>
     <button class="more" type="button" id="obSkip" style="margin:10px auto 0">あとで設定する</button></div>`);
   const range=()=>cycleRange(t,cyc==="pay"?+$("obDay").value:1);
-  const upd=()=>{const r=range(),D=pLen(r),v=digits($("obBud").value);$("obDaily").textContent=`期間:${md(r.start)}〜${md(r.end)}(${D}日)`+(v?` · 日割り 約${yen(v/D)}/日`:"");};
+  let obin="total";
+  const total=()=>{const v=digits($("obBud").value);return obin==="daily"?v*pLen(range()):v;};
+  const upd=()=>{const r=range(),D=pLen(r),v=digits($("obBud").value);
+    $("obDaily").textContent=`期間:${md(r.start)}〜${md(r.end)}(${D}日)`+(v?(obin==="daily"?` · 期間の合計 ${yen(v*D)}`:` · 1日あたり 約${yen(v/D)}`):"");};
+  $("obIn").onclick=e=>{const b=e.target.closest("[data-obin]");if(!b||b.dataset.obin===obin)return;
+    const v=digits($("obBud").value),D=pLen(range());obin=b.dataset.obin;
+    for(const x of $("obIn").children)x.setAttribute("aria-pressed",x===b);
+    /* 切り替えても同じ額になるよう、入力済みの金額を換算する */
+    if(v){const nv=obin==="daily"?Math.round(v/D):v*D;$("obBud").value=nv.toLocaleString("ja-JP");}
+    $("obBud").placeholder=obin==="daily"?"例 2,000":"例 60,000";upd();};
   $("obCyc").onclick=e=>{const b=e.target.closest("[data-cyc]");if(!b)return;cyc=b.dataset.cyc==="pay"?"pay":1;for(const x of $("obCyc").children)x.setAttribute("aria-pressed",x===b);$("obDay").hidden=cyc!=="pay";upd();};
   $("obDay").onchange=upd;
   $("obMode").onclick=e=>{const b=e.target.closest("[data-m]");if(!b)return;mode=b.dataset.m;for(const x of $("obMode").children)x.setAttribute("aria-pressed",x===b);};
   const bi=$("obBud");bi.addEventListener("input",ev=>{if(ev.isComposing)return;const v=digits(bi.value);bi.value=v?v.toLocaleString("ja-JP"):"";upd();});
-  $("obGo").onclick=()=>{const v=digits(bi.value);if(!v){toast("予算を入れてください");bi.focus();return;}
+  $("obGo").onclick=()=>{const v=total();if(!v){toast("使っていい額を入れてください");bi.focus();return;}
     const r=range(),day=cyc==="pay"?+$("obDay").value:1;
-    S.period={start:r.start,end:r.end,budget:v,hist:[{from:r.start,daily:v/pLen(r),budget:v,end:r.end}]};S.cycleDay=day;S.mode=mode;S.onboarded=true;save();draft=null;closeSheet();renderAll();
+    S.period={start:r.start,end:r.end,budget:v,hist:[{from:r.start,daily:v/pLen(r),budget:v,end:r.end}]};S.cycleDay=day;S.mode=mode;S.inputMode=obin;S.onboarded=true;save();draft=null;closeSheet();renderAll();
     toast(`準備ができました。今日あと ${yen(calcPeriod(S.period).allow[calcPeriod(S.period).ti])} 使えます`);};
   $("obSkip").onclick=()=>{S.onboarded=true;save();closeSheet();};
   upd();
