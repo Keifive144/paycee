@@ -477,7 +477,7 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
         <button class="btn" type="button" id="resetYes" style="background:var(--soft-red)">削除する</button>
       </div>
     </div>
-    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 14<br>画面を左右にスワイプするとタブを切り替えられます。</div>
+    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 15<br>画面を左右にスワイプするとタブを切り替えられます。</div>
   </section>
   </div>
 </main>
@@ -629,8 +629,8 @@ function dailyAt(p,d){const h=histOf(p);let v=h[0].daily;for(const x of h)if(x.f
 const usedOn=(c,i)=>c.spent[i]+(c.dates[i]<=today()?c.plan[i]:0);
 /* 予算内の判定:その日に有効だった日割りの額と比べる */
 const isOk=(c,i)=>{const v=usedOn(c,i);return c.budget>0&&(v===0||v<=c.dly[i]+0.5);};
-/* ストリーク用:変更後の日割りで達成していれば、さかのぼって達成とみなす */
-const isOkStreak=(c,i)=>{const v=usedOn(c,i);return c.budget>0&&(v===0||v<=Math.max(c.dly[i],c.curDaily)+0.5);};
+/* ストリーク用:繰越込みの「その日の枠」で判定(予算を変えると枠が計算し直され、さかのぼって反映される) */
+const isOkStreak=(c,i)=>c.budget>0&&(c.spent[i]===0||c.spent[i]<=c.allow[i]+0.5);
 
 function streak(){
   const c=calcPeriod(S.period);let run=0;
@@ -638,18 +638,18 @@ function streak(){
     if(isOkStreak(c,c.ti))run=1;else return 0;
     for(let i=c.ti-1;i>=0;i--){if(isOkStreak(c,i))run++;else return run;}
   }
-  for(let a=S.archives.length-1;a>=0;a--){const ds=S.archives[a].days||[];for(let i=ds.length-1;i>=0;i--){if(ds[i]==="o"||ds[i]==="z")run++;else return run;}}
+  for(let a=S.archives.length-1;a>=0;a--){const ds=S.archives[a].sdays||S.archives[a].days||[];for(let i=ds.length-1;i>=0;i--){if(ds[i]==="o"||ds[i]==="z")run++;else return run;}}
   return run;
 }
 
 /* ---------- period rollover ---------- */
 function summarize(p){
   const c=calcPeriod(p);
-  let tot=c.planTotal,inc=0,fx=0,okN=0,zero=0;const days=[];const cats={};
-  for(let i=0;i<c.D;i++){tot+=c.spent[i];inc+=c.inc[i];fx+=c.fixed[i];const ok=isOk(c,i);if(ok)okN++;if(!c.spent[i]&&!c.plan[i])zero++;days.push(usedOn(c,i)===0?"z":ok?"o":"x");}
+  let tot=c.planTotal,inc=0,fx=0,okN=0,zero=0;const days=[],sdays=[];const cats={};
+  for(let i=0;i<c.D;i++){tot+=c.spent[i];inc+=c.inc[i];fx+=c.fixed[i];const ok=isOk(c,i);if(ok)okN++;if(!c.spent[i]&&!c.plan[i])zero++;days.push(usedOn(c,i)===0?"z":ok?"o":"x");sdays.push(c.spent[i]===0?"z":isOkStreak(c,i)?"o":"x");}
   for(const e of S.expenses)if(e.type!=="in"&&e.group!=="fixed"&&e.date>=p.start&&e.date<=p.end)cats[e.group]=(cats[e.group]||0)+e.amount;
   const top=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
-  return{start:p.start,end:p.end,budget:p.budget,income:inc,spent:tot,fixed:fx,okDays:okN,zeroDays:zero,days,D:c.D,topGroup:top?top[0]:null,topAmt:top?top[1]:0};
+  return{start:p.start,end:p.end,budget:p.budget,income:inc,spent:tot,fixed:fx,okDays:okN,zeroDays:zero,days,sdays,D:c.D,topGroup:top?top[0]:null,topAmt:top?top[1]:0};
 }
 /* 終わった期間の日付の記録を足したり消したりしたら、その期間の結果を計算し直す */
 function refreshArchiveFor(date){
