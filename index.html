@@ -492,7 +492,7 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
         <button class="btn" type="button" id="resetYes" style="background:var(--soft-red)">削除する</button>
       </div>
     </div>
-    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 11<br>画面を左右にスワイプするとタブを切り替えられます。</div>
+    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 12<br>画面を左右にスワイプするとタブを切り替えられます。</div>
   </section>
   </div>
 </main>
@@ -795,13 +795,14 @@ function renderStatsBase(){
   const first=parseD(p.start).getDay();
   let h=DOW.split("").map((w,i)=>`<div class="dow${i===0?" sun":i===6?" sat":""}">${w}</div>`).join("");
   for(let i=0;i<first;i++)h+=`<div class="cell off"></div>`;
-  let zero=0;
+  let zero=0;const daily=c.budget/c.D;
   for(let i=0;i<c.D;i++){
-    const ds=c.dates[i],d=parseD(ds),v=c.spent[i],fut=ds>t;
+    const ds=c.dates[i],d=parseD(ds),fut=ds>t,v=c.spent[i]+(fut?0:c.plan[i]);
     let dot;
     if(fut)dot=(c.mark[i]>0||c.inc[i]>0)?"plan":"fut";
-    else{ if(!v&&!c.plan[i])zero++;
-      if(v>0&&!isOk(c,i))dot="over";else if(v<Math.max(c.base,1)*0.1)dot="none";else if(v<c.base*0.6)dot="small";else dot="norm";}
+    else{ if(!v)zero++;
+      /* 超過の判定は、最初に決めた日割り額(予算÷日数)と比べる */
+      if(v>0&&daily>0&&v>daily+0.5)dot="over";else if(v<Math.max(daily,1)*0.1)dot="none";else if(v<daily*0.6)dot="small";else dot="norm";}
     h+=`<button type="button" class="cell inper${ds===t?" today":""}" data-day="${ds}" aria-label="${d.getMonth()+1}月${d.getDate()}日 ${yen(v)}"><span class="d">${d.getDate()}</span><i class="dot ${dot}"></i></button>`;
   }
   $("cal").innerHTML=h;
@@ -1162,7 +1163,8 @@ let fixedRedraw=null;
 function openDay(ds){
   const items=S.expenses.filter(e=>e.date===ds).slice().reverse(),c=calcPeriod(S.period),i=diffDays(S.period.start,ds);
   const d=parseD(ds),inP=i>=0&&i<c.D;
-  const head=inP?`<div class="tiles" style="margin-top:0"><div class="tile"><div class="l">使った額</div><div class="v">${yen(c.spent[i])}</div>${c.plan[i]?`<div class="s">予定 ${yen(c.plan[i])}(取り分け済み)</div>`:""}</div><div class="tile"><div class="l">その日の枠</div><div class="v">${yen(c.allow[i])}</div><div class="s" style="color:${!isOk(c,i)?"var(--soft-red)":"var(--ok)"}">${ds>today()?"これからの日":!isOk(c,i)?yen(c.spent[i]-c.allow[i])+" オーバー":yen(c.allow[i]-c.spent[i])+" 残しました"}</div></div></div>`:"";
+  const dl=c.budget/c.D,used=inP?c.spent[i]+(ds>today()?0:c.plan[i]):0;
+  const head=inP?`<div class="tiles" style="margin-top:0"><div class="tile"><div class="l">使った額</div><div class="v">${yen(c.spent[i])}</div>${c.plan[i]?`<div class="s">予定 ${yen(c.plan[i])}(取り分け済み)</div>`:""}</div><div class="tile"><div class="l">日割りの額</div><div class="v">${yen(dl)}</div><div class="s" style="color:${used>dl+0.5?"var(--soft-red)":"var(--ok)"}">${ds>today()?"これからの日":used>dl+0.5?yen(used-dl)+" オーバー":yen(dl-used)+" 残しました"}</div><div class="s">その日の枠 ${yen(c.allow[i])}</div></div></div>`:"";
   openSheet(`${d.getMonth()+1}月${d.getDate()}日(${DOW[d.getDay()]})`,head+`<div style="margin-top:12px">${items.length?items.map(rowHTML).join(""):`<div class="empty">記録はありません</div>`}</div>`);
   dayRedraw=()=>openDayRefresh(ds);
 }
