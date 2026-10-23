@@ -218,6 +218,7 @@ main{padding-top:18px}
 .clegend i.box{width:10px;height:10px;border:0;border-radius:3px;background:var(--sage)}
 .clegend i.box.over{background:var(--over)}
 .clegend i.tick{width:14px;border-top:2px solid var(--ink)}
+.clegend i.daily{border-top:1.5px solid var(--sage-deep)}
 .cnote{margin:10px 0 0;font-size:13.5px;color:var(--ink);line-height:1.6}
 .cnote b{font-variant-numeric:tabular-nums}
 .cempty{color:var(--faint);text-align:center;padding:26px 0;font-size:13.5px}
@@ -391,7 +392,7 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
     <div class="card">
       <h2>日別の支出</h2>
       <div class="chart no-swipe" id="chDaily"></div>
-      <div class="clegend"><span><i class="box"></i>枠の中</span><span><i class="box over"></i>枠オーバー</span><span><i class="dash"></i>その日の枠</span></div>
+      <div class="clegend"><span><i class="box"></i>枠の中</span><span><i class="box over"></i>枠オーバー</span><span><i class="dash"></i>その日の枠(繰越込み)</span><span><i class="daily"></i>当初の日割り</span></div>
     </div>
     <div class="card">
       <h2>今期の振り返り <small id="calRange"></small></h2>
@@ -492,7 +493,7 @@ nav.tabs button[aria-current="page"]{color:var(--sage)}
         <button class="btn" type="button" id="resetYes" style="background:var(--soft-red)">削除する</button>
       </div>
     </div>
-    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 12<br>画面を左右にスワイプするとタブを切り替えられます。</div>
+    <div class="foot">Paycee. ペースいい、ペイシー。 · バージョン 13<br>画面を左右にスワイプするとタブを切り替えられます。</div>
   </section>
   </div>
 </main>
@@ -883,14 +884,17 @@ function chartPace(c){
 function chartDaily(c){
   const D=c.D,t=today(),vals=c.dates.map((d,i)=>c.spent[i]+c.plan[i]);
   if(!c.budget&&!vals.some(Boolean)){emptyChart("chDaily","支出を記録すると、日ごとの棒グラフが出ます");return;}
-  const fr=frame(Math.max(...vals,c.base*1.6,1)*1.05),pw=CW-ML-MR,bw=pw/D,X=i=>ML+i*bw,gap=Math.min(2,bw*.25);
+  const daily=c.budget/c.D;
+  const fr=frame(Math.max(...vals,c.base*1.6,daily*1.6,1)*1.05),pw=CW-ML-MR,bw=pw/D,X=i=>ML+i*bw,gap=Math.min(2,bw*.25);
   let bars="";
   for(let i=0;i<D;i++){const v=vals[i];if(!v)continue;const h=Math.max(2,fr.Y(0)-fr.Y(Math.min(v,fr.t))),fut=c.dates[i]>t,over=!fut&&c.spent[i]>0&&!isOk(c,i);
     bars+=`<rect x="${X(i)+gap/2}" y="${fr.Y(0)-h}" width="${Math.max(1,bw-gap)}" height="${h}" rx="${Math.min(3,bw/3)}" fill="${fut?"none":over?"var(--over)":"var(--sage)"}"${fut?' stroke="var(--over)" stroke-width="1.5"':""}/>`;}
   let st="";for(let i=0;i<D;i++){const y=fr.Y(Math.max(0,Math.min(c.allow[i],fr.t)));st+=`${i?"L":"M"}${X(i)} ${y} L${X(i)+bw} ${y} `;}
   const xl=[...new Set([0,Math.floor((D-1)/2),D-1])].map(i=>`<text x="${X(i)+bw/2}" y="${CHH-6}" text-anchor="middle">${md(c.dates[i])}</text>`).join("");
-  mount("chDaily",fr.g+bars+(c.budget?`<path d="${st}" fill="none" stroke="var(--muted)" stroke-width="1.3" stroke-dasharray="3 3"/>`:"")+xl,
-    {label:"日別の支出",xs:[...Array(D).keys()].map(i=>X(i)+bw/2),tip:i=>`${md(c.dates[i])}(${DOW[parseD(c.dates[i]).getDay()]})<br>使った額 <b>${yen(c.spent[i])}</b>${c.mark[i]?`<br>うち予定 ${yen(c.mark[i])}`:""}${c.inc[i]?`<br>収入 +${yen(c.inc[i])}`:""}<br>その日の枠 ${yen(c.allow[i])}`});
+  const dy=fr.Y(Math.min(daily,fr.t));
+  const dLine=c.budget?`<line x1="${ML}" x2="${CW-MR}" y1="${dy}" y2="${dy}" stroke="var(--sage-deep)" stroke-width="1.5"/><text x="${CW-MR}" y="${dy-5}" text-anchor="end" style="fill:var(--sage-deep);font-weight:700">日割り ${shortY(daily)}</text>`:"";
+  mount("chDaily",fr.g+bars+(c.budget?`<path d="${st}" fill="none" stroke="var(--muted)" stroke-width="1.3" stroke-dasharray="3 3"/>`:"")+dLine+xl,
+    {label:"日別の支出",xs:[...Array(D).keys()].map(i=>X(i)+bw/2),tip:i=>`${md(c.dates[i])}(${DOW[parseD(c.dates[i]).getDay()]})<br>使った額 <b>${yen(c.spent[i])}</b>${c.mark[i]?`<br>うち予定 ${yen(c.mark[i])}`:""}${c.inc[i]?`<br>収入 +${yen(c.inc[i])}`:""}<br>その日の枠 ${yen(c.allow[i])}<br>当初の日割り ${yen(daily)}`});
 }
 
 function chartDow(){
